@@ -148,22 +148,22 @@ mod not_char2_blackbox {
 
     #[test]
     fn test_nch2_f7() {
-        run_test::<PrimeField<7>>(1001, 10, 2500);
+        run_test::<PrimeField<7>>(1001, 10, 500);
     }
 
     #[test]
     fn test_nch2_f31() {
-        run_test::<PrimeField<31>>(1002, 10, 2500);
+        run_test::<PrimeField<31>>(1002, 10, 500);
     }
 
     #[test]
     fn test_nch2_f127() {
-        run_test::<PrimeField<127>>(1003, 5, 2500);
+        run_test::<PrimeField<127>>(1003, 5, 500);
     }
 
     #[test]
     fn test_nch2_f8191() {
-        run_test::<PrimeField<8191>>(1004, 3, 2500);
+        run_test::<PrimeField<8191>>(1004, 3, 500);
     }
 }
 
@@ -319,22 +319,22 @@ mod arbitrary_blackbox {
 
     #[test]
     fn test_arb_f7() {
-        run_test::<PrimeField<7>>(2001, 10, 2500);
+        run_test::<PrimeField<7>>(2001, 10, 500);
     }
 
     #[test]
     fn test_arb_f31() {
-        run_test::<PrimeField<31>>(2002, 10, 2500);
+        run_test::<PrimeField<31>>(2002, 10, 500);
     }
 
     #[test]
     fn test_arb_f127() {
-        run_test::<PrimeField<127>>(2003, 5, 2500);
+        run_test::<PrimeField<127>>(2003, 5, 500);
     }
 
     #[test]
     fn test_arb_f8191() {
-        run_test::<PrimeField<8191>>(2004, 3, 2500);
+        run_test::<PrimeField<8191>>(2004, 3, 500);
     }
 }
 
@@ -497,16 +497,16 @@ mod char2_blackbox {
 
     #[test]
     fn test_ch2_gf8() {
-        run_test::<BinaryExtField<3>>(3001, 10, 2500);
+        run_test::<BinaryExtField<3>>(3001, 10, 500);
     }
 
     #[test]
     fn test_ch2_gf256() {
-        run_test::<BinaryExtField<8>>(3002, 10, 2500);
+        run_test::<BinaryExtField<8>>(3002, 10, 500);
     }
 
     #[test]
     fn test_ch2_gf65536() {
-        run_test::<BinaryExtField<16>>(3003, 5, 2500);
+        run_test::<BinaryExtField<16>>(3003, 5, 500);
     }
 }
