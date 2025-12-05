@@ -57,7 +57,7 @@ impl<F: Field> Divisor<F> {
 /// Add two divisors on a ramified curve.
 ///
 /// Implements the specialized Cantor algorithm from `Add_RAM` in Magma.
-pub fn add<F: Field>(d1: &Divisor<F>, d2: &Divisor<F>, f: &Poly<F>, g: usize) -> Divisor<F> {
+pub fn add<F: Field>(d1: &Divisor<F>, d2: &Divisor<F>, _f: &Poly<F>, g: usize) -> Divisor<F> {
     let u1 = &d1.u;
     let v1 = &d1.v;
     let w1 = &d1.w;
@@ -89,7 +89,7 @@ pub fn add<F: Field>(d1: &Divisor<F>, d2: &Divisor<F>, f: &Poly<F>, g: usize) ->
             // u2 := u2 / S
             u2 = u2.exact_div(&s2);
             // w1 := w1 * S
-            w1 = w1 * s2;
+            w1 *= s2;
         }
     }
 
@@ -109,7 +109,7 @@ pub fn add<F: Field>(d1: &Divisor<F>, d2: &Divisor<F>, f: &Poly<F>, g: usize) ->
             let (q, r) = v.div_rem(&u);
             // w := w + q*(v + r)
             let v_plus_r = &v + &r;
-            w = w + q * v_plus_r;
+            w += q * v_plus_r;
             v = r;
         }
     } else {
@@ -135,7 +135,7 @@ pub fn add<F: Field>(d1: &Divisor<F>, d2: &Divisor<F>, f: &Poly<F>, g: usize) ->
 /// Double a divisor on a ramified curve.
 ///
 /// Implements `Double_RAM` from Magma.
-pub fn double<F: Field>(d1: &Divisor<F>, f: &Poly<F>, g: usize) -> Divisor<F> {
+pub fn double<F: Field>(d1: &Divisor<F>, _f: &Poly<F>, g: usize) -> Divisor<F> {
     let u1 = &d1.u;
     let v1 = &d1.v;
     let w1 = &d1.w;
@@ -147,7 +147,7 @@ pub fn double<F: Field>(d1: &Divisor<F>, f: &Poly<F>, g: usize) -> Divisor<F> {
     let (s, _a1, b1) = u1.xgcd(&t1);
 
     // K := b1*w1 mod u1
-    let mut k = (b1 * w1.clone()).rem(u1);
+    let k = (b1 * w1.clone()).rem(u1);
 
     let mut u1 = u1.clone();
     let mut w1 = w1.clone();
@@ -156,7 +156,7 @@ pub fn double<F: Field>(d1: &Divisor<F>, f: &Poly<F>, g: usize) -> Divisor<F> {
         // u1 := u1 / S
         u1 = u1.exact_div(&s);
         // w1 := w1 * S
-        w1 = w1 * s;
+        w1 *= s;
     }
 
     // T := u1 * K
@@ -174,7 +174,7 @@ pub fn double<F: Field>(d1: &Divisor<F>, f: &Poly<F>, g: usize) -> Divisor<F> {
         if v.deg() >= u.deg() {
             let (q, r) = v.div_rem(&u);
             let v_plus_r = &v + &r;
-            w = w + q * v_plus_r;
+            w += q * v_plus_r;
             v = r;
         }
     } else {
@@ -233,7 +233,7 @@ pub fn nucomp<F: Field>(d1: &Divisor<F>, d2: &Divisor<F>, f: &Poly<F>, g: usize)
         if !s2.is_one() {
             u1 = u1.exact_div(&s2);
             u2 = u2.exact_div(&s2);
-            w1 = w1 * s2;
+            w1 *= s2;
         }
     }
 
@@ -242,7 +242,7 @@ pub fn nucomp<F: Field>(d1: &Divisor<F>, d2: &Divisor<F>, f: &Poly<F>, g: usize)
     if combined_deg <= g as i32 {
         // No NUCOMP needed, use regular addition
         let t = &u1 * &k;
-        let mut u = &u1 * &u2;
+        let u = &u1 * &u2;
         let mut v = v1 + &t;
         let v1_plus_v = v1 + &v;
         let mut w = (w1 - k.clone() * v1_plus_v).exact_div(&u2);
@@ -250,7 +250,7 @@ pub fn nucomp<F: Field>(d1: &Divisor<F>, d2: &Divisor<F>, f: &Poly<F>, g: usize)
         if v.deg() >= u.deg() {
             let (q, r) = v.div_rem(&u);
             let v_plus_r = &v + &r;
-            w = w + q * v_plus_r;
+            w += q * v_plus_r;
             v = r;
         }
 
@@ -314,20 +314,20 @@ pub fn nuduple<F: Field>(d1: &Divisor<F>, f: &Poly<F>, g: usize) -> Divisor<F> {
     let (s, _a1, b1) = u1.xgcd(&t2);
 
     // K := b1*w1 mod u1
-    let mut k = (b1 * w1.clone()).rem(u1);
+    let k = (b1 * w1.clone()).rem(u1);
 
     let mut u1 = u1.clone();
     let mut w1 = w1.clone();
 
     if !s.is_one() {
         u1 = u1.exact_div(&s);
-        w1 = w1 * s;
+        w1 *= s;
     }
 
     if 2 * u1.deg() <= g as i32 {
         // No NUCOMP needed
         let t = &u1 * &k;
-        let mut u = &u1 * &u1;
+        let u = &u1 * &u1;
         let mut v = v1 + &t;
         let t2_plus_t = &t2 + &t;
         let mut w = (w1 - k.clone() * t2_plus_t).exact_div(&u1);
@@ -335,7 +335,7 @@ pub fn nuduple<F: Field>(d1: &Divisor<F>, f: &Poly<F>, g: usize) -> Divisor<F> {
         if v.deg() >= u.deg() {
             let (q, r) = v.div_rem(&u);
             let v_plus_r = &v + &r;
-            w = w + q * v_plus_r;
+            w += q * v_plus_r;
             v = r;
         }
 

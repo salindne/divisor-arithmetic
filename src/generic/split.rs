@@ -100,7 +100,7 @@ pub fn compute_vpl<F: Field>(f: &Poly<F>, g: usize) -> Poly<F> {
         let diff = f - &vpl_sq;
         let coeff = diff.coeff(g + 1 + i);
         let term = Poly::monomial(dinv * coeff, i);
-        vpl = vpl + term;
+        vpl += term;
     }
 
     vpl
@@ -111,7 +111,7 @@ pub fn compute_vpl<F: Field>(f: &Poly<F>, g: usize) -> Poly<F> {
 /// Implements `Adjust_SPLIT_NEG` from Magma.
 pub fn adjust_neg<F: Field>(
     mut d: Divisor<F>,
-    f: &Poly<F>,
+    _f: &Poly<F>,
     v_neg: &Poly<F>, // -Vpl
     g: usize,
 ) -> Divisor<F> {
@@ -140,7 +140,7 @@ pub fn adjust_neg<F: Field>(
         let t = &v_pos - v_neg;
         let (q, r) = t.div_rem(&d.u);
         let tv = &d.v + &t - r;
-        d.w = d.w - q * (&d.v + &tv);
+        d.w -= q * (&d.v + &tv);
         d.v = tv;
 
         while d.n > g_i32 - d.u.deg() + 1 {
@@ -167,7 +167,7 @@ pub fn adjust_neg<F: Field>(
             let t = v_neg - &v_pos;
             let (q, r) = t.div_rem(&d.u);
             let tv = &d.v + &t - r;
-            d.w = d.w - q * (&d.v + &tv);
+            d.w -= q * (&d.v + &tv);
             d.v = tv;
         }
 
@@ -205,7 +205,7 @@ pub fn add_neg<F: Field>(
     let mut u1 = u1.clone();
     let mut u2 = u2.clone();
     let mut w1 = w1.clone();
-    let mut s_deg = s.deg();
+    let s_deg;
 
     if !s.is_one() {
         let v_sum = v2 + v1;
@@ -215,7 +215,7 @@ pub fn add_neg<F: Field>(
             u1 = u1.exact_div(&s2);
             u2 = u2.exact_div(&s2);
             k = (a2 * k + b2 * w1.clone()).rem(&u2);
-            w1 = w1 * s2.clone();
+            w1 *= s2.clone();
             s_deg = s2.deg();
         } else {
             k = (a2 * k + b2 * w1.clone()).rem(&u2);
@@ -238,7 +238,7 @@ pub fn add_neg<F: Field>(
         let v_neg_minus_v = v_neg - &v;
         let (q, r) = v_neg_minus_v.div_rem(&u);
         let tv = v_neg - &r;
-        w = w - q * (&v + &tv);
+        w -= q * (&v + &tv);
         v = tv;
     }
 
@@ -254,7 +254,7 @@ pub fn add_neg<F: Field>(
         } else if v_deg == g_i32 + 1 && lc_v == lc_v_neg {
             n = n + g_i32 + 1 - w.deg();
         } else {
-            n = n + (u.deg() - w.deg()) / 2;
+            n += (u.deg() - w.deg()) / 2;
         }
 
         let ou = u.clone();
@@ -287,13 +287,13 @@ pub fn double_neg<F: Field>(d1: &Divisor<F>, f: &Poly<F>, v_neg: &Poly<F>, g: us
 
     let mut u1 = u1.clone();
     let mut w1 = w1.clone();
-    let mut k;
-    let mut s_deg;
+    let k;
+    let s_deg;
 
     if !s.is_one() {
         u1 = u1.exact_div(&s);
         k = (b1 * w1.clone()).rem(&u1);
-        w1 = w1 * s.clone();
+        w1 *= s.clone();
         s_deg = s.deg();
     } else {
         k = (b1 * w1.clone()).rem(&u1);
@@ -313,7 +313,7 @@ pub fn double_neg<F: Field>(d1: &Divisor<F>, f: &Poly<F>, v_neg: &Poly<F>, g: us
         let v_neg_minus_v = v_neg - &v;
         let (q, r) = v_neg_minus_v.div_rem(&u);
         let tv = v_neg - &r;
-        w = w - q * (&v + &tv);
+        w -= q * (&v + &tv);
         v = tv;
     }
 
@@ -329,7 +329,7 @@ pub fn double_neg<F: Field>(d1: &Divisor<F>, f: &Poly<F>, v_neg: &Poly<F>, g: us
         } else if v_deg == g_i32 + 1 && lc_v == lc_v_neg {
             n = n + g_i32 + 1 - w.deg();
         } else {
-            n = n + (u.deg() - w.deg()) / 2;
+            n += (u.deg() - w.deg()) / 2;
         }
 
         let ou = u.clone();
@@ -353,7 +353,7 @@ pub fn double_neg<F: Field>(d1: &Divisor<F>, f: &Poly<F>, v_neg: &Poly<F>, g: us
 /// Implements `Adjust_SPLIT_POS` from Magma.
 pub fn adjust_pos<F: Field>(
     mut d: Divisor<F>,
-    f: &Poly<F>,
+    _f: &Poly<F>,
     v_pos: &Poly<F>, // Vpl
     g: usize,
 ) -> Divisor<F> {
@@ -380,7 +380,7 @@ pub fn adjust_pos<F: Field>(
         let t = &v_neg - v_pos;
         let (q, r) = t.div_rem(&d.u);
         let tv = &d.v + &t - r;
-        d.w = d.w - q * (&d.v + &tv);
+        d.w -= q * (&d.v + &tv);
         d.v = tv;
 
         while d.n < -1 {
@@ -407,7 +407,7 @@ pub fn adjust_pos<F: Field>(
             let t = v_pos - &v_neg;
             let (q, r) = t.div_rem(&d.u);
             let tv = &d.v + &t - r;
-            d.w = d.w - q * (&d.v + &tv);
+            d.w -= q * (&d.v + &tv);
             d.v = tv;
         }
 
@@ -445,7 +445,7 @@ pub fn add_pos<F: Field>(
     let mut u1 = u1.clone();
     let mut u2 = u2.clone();
     let mut w1 = w1.clone();
-    let mut s_deg = s.deg();
+    let s_deg;
 
     if !s.is_one() {
         let v_sum = v2 + v1;
@@ -455,7 +455,7 @@ pub fn add_pos<F: Field>(
             u1 = u1.exact_div(&s2);
             u2 = u2.exact_div(&s2);
             k = (a2 * k + b2 * w1.clone()).rem(&u2);
-            w1 = w1 * s2.clone();
+            w1 *= s2.clone();
             s_deg = s2.deg();
         } else {
             k = (a2 * k + b2 * w1.clone()).rem(&u2);
@@ -478,7 +478,7 @@ pub fn add_pos<F: Field>(
         let v_pos_minus_v = v_pos - &v;
         let (q, r) = v_pos_minus_v.div_rem(&u);
         let tv = v_pos - &r;
-        w = w - q * (&v + &tv);
+        w -= q * (&v + &tv);
         v = tv;
     }
 
@@ -494,7 +494,7 @@ pub fn add_pos<F: Field>(
         } else if v_deg == g_i32 + 1 && lc_v == neg_lc_v_pos {
             n = n + g_i32 + 1 - w.deg();
         } else {
-            n = n + (u.deg() - w.deg()) / 2;
+            n += (u.deg() - w.deg()) / 2;
         }
 
         let ou = u.clone();
@@ -527,13 +527,13 @@ pub fn double_pos<F: Field>(d1: &Divisor<F>, f: &Poly<F>, v_pos: &Poly<F>, g: us
 
     let mut u1 = u1.clone();
     let mut w1 = w1.clone();
-    let mut k;
-    let mut s_deg;
+    let k;
+    let s_deg;
 
     if !s.is_one() {
         u1 = u1.exact_div(&s);
         k = (b1 * w1.clone()).rem(&u1);
-        w1 = w1 * s.clone();
+        w1 *= s.clone();
         s_deg = s.deg();
     } else {
         k = (b1 * w1.clone()).rem(&u1);
@@ -553,7 +553,7 @@ pub fn double_pos<F: Field>(d1: &Divisor<F>, f: &Poly<F>, v_pos: &Poly<F>, g: us
         let v_pos_minus_v = v_pos - &v;
         let (q, r) = v_pos_minus_v.div_rem(&u);
         let tv = v_pos - &r;
-        w = w - q * (&v + &tv);
+        w -= q * (&v + &tv);
         v = tv;
     }
 
@@ -569,7 +569,7 @@ pub fn double_pos<F: Field>(d1: &Divisor<F>, f: &Poly<F>, v_pos: &Poly<F>, g: us
         } else if v_deg == g_i32 + 1 && lc_v == neg_lc_v_pos {
             n = n + g_i32 + 1 - w.deg();
         } else {
-            n = n + (u.deg() - w.deg()) / 2;
+            n += (u.deg() - w.deg()) / 2;
         }
 
         let ou = u.clone();
@@ -606,7 +606,7 @@ mod tests {
     }
 
     /// Find a valid divisor on a split curve
-    fn find_valid_split_divisor(f: &Poly<F7>, vpl: &Poly<F7>, g: usize) -> Option<Divisor<F7>> {
+    fn find_valid_split_divisor(f: &Poly<F7>, vpl: &Poly<F7>, _g: usize) -> Option<Divisor<F7>> {
         // Try to find x where f(x) is a quadratic residue
         for a_val in 0..7u64 {
             let a = F7::new(a_val);
@@ -698,7 +698,7 @@ mod tests {
             let t = &v_neg - &vpl;
             let (q, r) = t.div_rem(&d.u);
             let tv = &d.v + &t - r;
-            d.w = d.w - q * (&d.v + &tv);
+            d.w -= q * (&d.v + &tv);
             d.v = tv;
 
             // Double should produce a valid divisor

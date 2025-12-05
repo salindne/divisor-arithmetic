@@ -197,6 +197,7 @@ pub fn deg12_add<F: Field>(
 /// Input: `D1 = (x² + u1*x + u0, v1*x + v0)`, `D2 = (x² + up1*x + up0, vp1*x + vp0)`
 /// Output: `D3 = D1 + D2`
 #[inline]
+#[allow(clippy::too_many_arguments)]
 pub fn deg2_add<F: Field>(
     u1: F,
     u0: F,
@@ -283,7 +284,7 @@ pub fn deg2_add<F: Field>(
         }
 
         // General GCD = 1 case with d = 0
-        let k2 = -u1;
+        // k2 = -u1 (not needed in this branch, included for formula completeness)
         let k1 = f3 - u0 + u1.square();
         let k0 = f2 - v1.square() + u1 * (u0 - k1);
 
@@ -311,6 +312,7 @@ pub fn deg2_add<F: Field>(
 
 /// Common computation for deg2_add after computing sp0, sp1, d
 #[inline]
+#[allow(clippy::too_many_arguments)]
 fn deg2_add_common<F: Field>(
     u1: F,
     u0: F,

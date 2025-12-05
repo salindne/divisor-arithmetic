@@ -206,6 +206,7 @@ impl<const P: u64> MulAssign for PrimeField<P> {
 impl<const P: u64> Div for PrimeField<P> {
     type Output = Self;
     #[inline]
+    #[allow(clippy::suspicious_arithmetic_impl)]
     fn div(self, rhs: Self) -> Self {
         self * rhs.inv()
     }
@@ -379,7 +380,7 @@ impl<const K: usize> BinaryExtField<K> {
         let mut e = exp;
         while e > 0 {
             if e & 1 == 1 {
-                result = result * base;
+                result *= base;
             }
             base = base * base;
             e >>= 1;
@@ -422,6 +423,7 @@ impl<const K: usize> Field for BinaryExtField<K> {
 impl<const K: usize> Add for BinaryExtField<K> {
     type Output = Self;
     #[inline]
+    #[allow(clippy::suspicious_arithmetic_impl)]
     fn add(self, rhs: Self) -> Self {
         // In GF(2^k), addition is XOR
         Self {
@@ -432,6 +434,7 @@ impl<const K: usize> Add for BinaryExtField<K> {
 
 impl<const K: usize> AddAssign for BinaryExtField<K> {
     #[inline]
+    #[allow(clippy::suspicious_op_assign_impl)]
     fn add_assign(&mut self, rhs: Self) {
         self.bits ^= rhs.bits;
     }
@@ -440,6 +443,7 @@ impl<const K: usize> AddAssign for BinaryExtField<K> {
 impl<const K: usize> Sub for BinaryExtField<K> {
     type Output = Self;
     #[inline]
+    #[allow(clippy::suspicious_arithmetic_impl)]
     fn sub(self, rhs: Self) -> Self {
         // In GF(2^k), subtraction is the same as addition (XOR)
         Self {
@@ -450,6 +454,7 @@ impl<const K: usize> Sub for BinaryExtField<K> {
 
 impl<const K: usize> SubAssign for BinaryExtField<K> {
     #[inline]
+    #[allow(clippy::suspicious_op_assign_impl)]
     fn sub_assign(&mut self, rhs: Self) {
         self.bits ^= rhs.bits;
     }
@@ -476,6 +481,7 @@ impl<const K: usize> MulAssign for BinaryExtField<K> {
 impl<const K: usize> Div for BinaryExtField<K> {
     type Output = Self;
     #[inline]
+    #[allow(clippy::suspicious_arithmetic_impl)]
     fn div(self, rhs: Self) -> Self {
         self * rhs.inv()
     }

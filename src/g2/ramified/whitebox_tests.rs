@@ -5,7 +5,7 @@
 //!
 //! Total: 66 test cases (22 arbitrary + 22 char2 + 22 not_char2)
 
-use crate::field::{BinaryExtField, Field, PrimeField};
+use crate::field::{BinaryExtField, PrimeField};
 
 // =============================================================================
 // ARBITRARY (Arbitrary Characteristic) Tests - 22 cases

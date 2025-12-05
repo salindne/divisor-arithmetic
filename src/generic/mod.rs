@@ -598,6 +598,7 @@ mod comparison_tests {
     }
 
     /// Find a point (a, b) on the curve y² = f(x) where f(a) = b²
+    #[allow(dead_code)]
     fn find_curve_point(f: &Poly<F31>) -> Option<(F31, F31)> {
         for a_val in 0..31u64 {
             let a = F31::new(a_val);
@@ -787,7 +788,7 @@ mod comparison_tests {
             F31::one(),
         ]);
 
-        let cc = poly_to_curve_constants(&f);
+        let _cc = poly_to_curve_constants(&f);
 
         // Create valid degree 1 divisors and compose them to get degree 2
         let (d1_coords, d1_generic) =
@@ -820,10 +821,10 @@ mod comparison_tests {
                 }
             }
 
-            if let Some((d3_coords, d3_generic, third_a)) = d3_opt {
+            if let Some((_d3_coords, d3_generic, third_a)) = d3_opt {
                 exclude_set.push(third_a);
 
-                let (d4_coords, d4_generic) = create_valid_deg1_divisor(&f, Some(third_a))
+                let (_d4_coords, d4_generic) = create_valid_deg1_divisor(&f, Some(third_a))
                     .expect("Should find fourth valid divisor");
 
                 let d2_deg2_generic = ramified::add(&d3_generic, &d4_generic, &f, 2);

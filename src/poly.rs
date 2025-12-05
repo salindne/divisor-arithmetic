@@ -151,8 +151,7 @@ impl<F: Field> Poly<F> {
             let q_coeff = remainder[i] * lc_inv;
             quotient[i - divisor_deg] = q_coeff;
             for j in 0..=divisor_deg {
-                remainder[i - divisor_deg + j] =
-                    remainder[i - divisor_deg + j] - q_coeff * divisor.coeffs[j];
+                remainder[i - divisor_deg + j] -= q_coeff * divisor.coeffs[j];
             }
         }
 
