@@ -2,7 +2,7 @@
 
 [![Crates.io](https://img.shields.io/crates/v/divisor-arithmetic.svg)](https://crates.io/crates/divisor-arithmetic)
 [![Documentation](https://docs.rs/divisor-arithmetic/badge.svg)](https://docs.rs/divisor-arithmetic)
-[![CI](https://github.com/salindne/divisor-arithmetic/actions/workflows/ci.yml/badge.svg)](https://github.com/salindne/divisor-arithmetic/actions)
+[![CI](https://github.com/salindne/divisor-arithmetic/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/salindne/divisor-arithmetic/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Explicit formulas for divisor arithmetic on genus 2 and 3 hyperelliptic curves.
