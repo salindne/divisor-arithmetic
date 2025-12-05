@@ -50,7 +50,7 @@ impl<F: Field> Divisor<F> {
             u: Poly::constant(F::one()),
             v: v_pl.clone(),
             w,
-            n: ((g + 1) / 2) as i32,
+            n: g.div_ceil(2) as i32,
         }
     }
 
