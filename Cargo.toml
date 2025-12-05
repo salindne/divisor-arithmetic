@@ -1,0 +1,25 @@
+[package]
+name = "divisor-arithmetic"
+version = "0.1.0"
+edition = "2021"
+authors = ["Sebastian Lindner"]
+description = "Explicit formulas for divisor arithmetic on genus 2 and 3 hyperelliptic curves"
+license = "MIT"
+repository = "https://github.com/salindne/divisor-arithmetic"
+documentation = "https://docs.rs/divisor-arithmetic"
+readme = "README.md"
+keywords = ["cryptography", "hyperelliptic", "divisor", "jacobian", "curve"]
+categories = ["cryptography", "mathematics", "science"]
+
+[dependencies]
+rand = "0.8"
+
+[dev-dependencies]
+criterion = "0.5"
+
+[[bench]]
+name = "benchmarks"
+harness = false
+
+[features]
+default = []
