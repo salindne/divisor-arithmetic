@@ -407,7 +407,7 @@ mod tests {
         for a_val in 0..7u64 {
             let a = F7::new(a_val);
             let fa = f.eval(a);
-            
+
             // Check if fa is a square in F7
             // a is a square mod 7 if a^3 = 1 (or a = 0)
             if fa.is_zero() || fa.pow(3).is_one() {
@@ -419,7 +419,7 @@ mod tests {
                     // For p = 7 ≡ 3 (mod 4), sqrt(a) = a^((p+1)/4) = a^2
                     fa.pow(2)
                 };
-                
+
                 // Verify it's actually a square root
                 if b * b == fa {
                     // u = x - a
@@ -427,7 +427,7 @@ mod tests {
                     let v = Poly::constant(b);
                     let v_sq = &v * &v;
                     let diff = f - &v_sq;
-                    
+
                     // Check divisibility
                     let (_, rem) = diff.div_rem(&u);
                     if rem.is_zero() {
@@ -444,7 +444,7 @@ mod tests {
     fn test_neutral() {
         let f = test_curve_g2();
         let neutral = Divisor::neutral(&f);
-        
+
         assert!(neutral.u.is_one());
         assert!(neutral.v.is_zero());
         assert_eq!(neutral.w, f);
@@ -462,7 +462,7 @@ mod tests {
         // D + 0 should give a valid reduced divisor
         let result = add(&d, &neutral, &f, g);
         assert!(result.u.deg() <= g as i32);
-        
+
         // Verify it's still valid: w = (f - v²) / u
         let v_sq = &result.v * &result.v;
         let expected_w = (f - v_sq).exact_div(&result.u);
@@ -516,4 +516,3 @@ mod tests {
         assert_eq!(via_double.v, via_nuduple.v);
     }
 }
-

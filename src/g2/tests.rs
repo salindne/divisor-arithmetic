@@ -4,9 +4,9 @@
 //! produce identical results to the generic polynomial-level algorithms.
 
 use crate::field::{Field, PrimeField};
-use crate::poly::Poly;
-use crate::generic::ramified as generic_ram;
 use crate::g2::ramified::{arbitrary, not_char2};
+use crate::generic::ramified as generic_ram;
+use crate::poly::Poly;
 
 type F7 = PrimeField<7>;
 type F11 = PrimeField<11>;
@@ -44,7 +44,9 @@ fn arbitrary_to_generic<F: crate::field::Field>(
 }
 
 /// Convert generic divisor to specialized g2 ramified format
-fn generic_to_arbitrary<F: crate::field::Field>(d: &generic_ram::Divisor<F>) -> arbitrary::DivisorCoords<F> {
+fn generic_to_arbitrary<F: crate::field::Field>(
+    d: &generic_ram::Divisor<F>,
+) -> arbitrary::DivisorCoords<F> {
     let deg = d.u.deg();
     match deg {
         0 | -1 => arbitrary::DivisorCoords::identity(),
@@ -91,7 +93,9 @@ fn not_char2_to_generic<F: crate::field::Field>(
 }
 
 /// Convert generic divisor to nch2 format
-fn generic_to_not_char2<F: crate::field::Field>(d: &generic_ram::Divisor<F>) -> not_char2::DivisorCoords<F> {
+fn generic_to_not_char2<F: crate::field::Field>(
+    d: &generic_ram::Divisor<F>,
+) -> not_char2::DivisorCoords<F> {
     let deg = d.u.deg();
     match deg {
         0 | -1 => not_char2::DivisorCoords::identity(),
@@ -112,12 +116,14 @@ fn generic_to_not_char2<F: crate::field::Field>(d: &generic_ram::Divisor<F>) -> 
 }
 
 /// Find a valid degree-1 divisor on a ramified g2 curve y² = f(x)
-fn find_deg1_divisor<const P: u64>(f: &Poly<PrimeField<P>>) -> Option<generic_ram::Divisor<PrimeField<P>>> {
+fn find_deg1_divisor<const P: u64>(
+    f: &Poly<PrimeField<P>>,
+) -> Option<generic_ram::Divisor<PrimeField<P>>> {
     // Try to find x where f(x) is a square
     for a_val in 0..P {
         let a = PrimeField::<P>::new(a_val);
         let fa = f.eval(a);
-        
+
         // Check if fa is a quadratic residue using Euler's criterion
         // a^((p-1)/2) = 1 means a is a square (or a = 0)
         if fa.is_zero() {
@@ -128,7 +134,7 @@ fn find_deg1_divisor<const P: u64>(f: &Poly<PrimeField<P>>) -> Option<generic_ra
             let w = f.exact_div(&u);
             return Some(generic_ram::Divisor::new(u, v, w));
         }
-        
+
         let exp = (P - 1) / 2;
         if fa.pow(exp).is_one() {
             // fa is a square, find its root
@@ -142,7 +148,7 @@ fn find_deg1_divisor<const P: u64>(f: &Poly<PrimeField<P>>) -> Option<generic_ra
                     let v = Poly::constant(b);
                     let v_sq = &v * &v;
                     let diff = f - &v_sq;
-                    
+
                     // Verify divisibility
                     let (_, rem) = diff.div_rem(&u);
                     if rem.is_zero() {
@@ -273,7 +279,7 @@ mod arbitrary_tests {
 }
 
 // ============================================================================
-// Tests for not characteristic 2 (not_char2) module  
+// Tests for not characteristic 2 (not_char2) module
 // ============================================================================
 
 mod not_char2_tests {
@@ -416,4 +422,3 @@ mod larger_prime_tests {
         assert_eq!(d3_gen.v, d3_from_nch2.v, "3D v polynomials differ");
     }
 }
-

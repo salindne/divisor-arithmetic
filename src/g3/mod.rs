@@ -9,4 +9,3 @@
 //!   - `y² + h(x)y = f(x)` where `deg(f) = 8`, `deg(h) ≤ 4`
 
 // pub mod split;  // TODO: implement split model
-

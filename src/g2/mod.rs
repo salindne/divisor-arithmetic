@@ -19,5 +19,4 @@ pub mod ramified;
 // pub mod split;  // TODO: implement split model
 
 #[cfg(test)]
-mod tests;  // Integration tests comparing specialized vs generic
-
+mod tests; // Integration tests comparing specialized vs generic

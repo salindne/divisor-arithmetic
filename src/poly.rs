@@ -172,7 +172,7 @@ impl<F: Field> Poly<F> {
     }
 
     /// Extended GCD: returns (gcd, a, b) such that gcd = a*self + b*other
-    /// 
+    ///
     /// The GCD is made monic (leading coefficient = 1).
     /// This matches Magma's XGCD function.
     pub fn xgcd(&self, other: &Self) -> (Self, Self, Self) {
@@ -182,20 +182,12 @@ impl<F: Field> Poly<F> {
             }
             let lc = other.leading_coeff();
             let lc_inv = lc.inv();
-            return (
-                other.clone() * lc_inv,
-                Self::zero(),
-                Self::constant(lc_inv),
-            );
+            return (other.clone() * lc_inv, Self::zero(), Self::constant(lc_inv));
         }
         if other.is_zero() {
             let lc = self.leading_coeff();
             let lc_inv = lc.inv();
-            return (
-                self.clone() * lc_inv,
-                Self::constant(lc_inv),
-                Self::zero(),
-            );
+            return (self.clone() * lc_inv, Self::constant(lc_inv), Self::zero());
         }
 
         // Extended Euclidean algorithm
@@ -208,10 +200,10 @@ impl<F: Field> Poly<F> {
 
         while !r1.is_zero() {
             let (q, r) = r0.div_rem(&r1);
-            
+
             let new_a = a0.clone() - q.clone() * a1.clone();
             let new_b = b0.clone() - q * b1.clone();
-            
+
             r0 = r1;
             r1 = r;
             a0 = a1;
@@ -473,10 +465,10 @@ mod tests {
         let p2 = poly(&[2, 1]); // x + 2
 
         let (gcd, a, b) = p1.xgcd(&p2);
-        
+
         // GCD should be 1 (monic constant)
         assert!(gcd.is_one());
-        
+
         // Verify: gcd = a*p1 + b*p2
         let check = a * p1 + b * p2;
         assert!(check.is_one());
@@ -489,12 +481,12 @@ mod tests {
         let p2 = poly(&[2, 3, 1]); // x² + 3x + 2 = (x+1)(x+2)
 
         let (gcd, a, b) = p1.xgcd(&p2);
-        
+
         // GCD should be x + 1 (monic)
         assert_eq!(gcd.degree(), Some(1));
         assert!(gcd.is_monic());
         assert_eq!(gcd.coeff(0).value(), 1); // x + 1
-        
+
         // Verify: gcd = a*p1 + b*p2
         let check = a * p1 + b * p2;
         assert_eq!(check, gcd);
@@ -506,11 +498,11 @@ mod tests {
         let zero = Poly::<F7>::zero();
 
         let (gcd, a, _b) = p1.xgcd(&zero);
-        
+
         // GCD(p, 0) = p (made monic)
         assert!(gcd.is_monic());
         assert_eq!(gcd.degree(), Some(1));
-        
+
         // a * p1 = gcd
         let check = a * p1;
         assert_eq!(check, gcd);
@@ -521,10 +513,9 @@ mod tests {
         let one = Poly::constant(F7::one());
         let two = Poly::constant(F7::new(2));
         let x = poly(&[0, 1]);
-        
+
         assert!(one.is_one());
         assert!(!two.is_one());
         assert!(!x.is_one());
     }
 }
-

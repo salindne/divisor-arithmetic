@@ -225,7 +225,9 @@ impl<const P: u64> Neg for PrimeField<P> {
         if self.value == 0 {
             self
         } else {
-            Self { value: P - self.value }
+            Self {
+                value: P - self.value,
+            }
         }
     }
 }
@@ -283,33 +285,33 @@ impl<const K: usize> BinaryExtField<K> {
         // Bit pattern represents: x^K + (lower terms)
         // e.g., 0b111 for K=2 means x² + x + 1
         match K {
-            1 => 0b11,                        // x + 1 (trivial: GF(2))
-            2 => 0b111,                       // x² + x + 1
-            3 => 0b1011,                      // x³ + x + 1
-            4 => 0b10011,                     // x⁴ + x + 1
-            5 => 0b100101,                    // x⁵ + x² + 1
-            6 => 0b1000011,                   // x⁶ + x + 1
-            7 => 0b10000011,                  // x⁷ + x + 1
-            8 => 0b100011011,                 // x⁸ + x⁴ + x³ + x + 1
-            9 => 0b1000010001,                // x⁹ + x⁴ + 1
-            10 => 0b10000001001,              // x¹⁰ + x³ + 1
-            11 => 0b100000000101,             // x¹¹ + x² + 1
-            12 => 0b1000001010011,            // x¹² + x⁶ + x⁴ + x + 1
-            13 => 0b10000000011011,           // x¹³ + x⁴ + x³ + x + 1
-            14 => 0b100000000101011,          // x¹⁴ + x⁵ + x³ + x + 1
-            15 => 0b1000000000000011,         // x¹⁵ + x + 1
-            16 => 0b10001000000001011,        // x¹⁶ + x¹² + x³ + x + 1
-            17 => 0b100000000000001001,       // x¹⁷ + x³ + 1
-            18 => 0b1000000000010000001,      // x¹⁸ + x⁷ + 1
-            19 => 0b10000000000000100111,     // x¹⁹ + x⁵ + x² + x + 1
-            20 => 0b100000000000000001001,    // x²⁰ + x³ + 1
-            21 => 0b1000000000000000000101,   // x²¹ + x² + 1
-            22 => 0b10000000000000000000011,  // x²² + x + 1
-            23 => 0b100000000000000000100001, // x²³ + x⁵ + 1
-            24 => 0b1000000000000000010000111,// x²⁴ + x⁷ + x² + x + 1
+            1 => 0b11,                         // x + 1 (trivial: GF(2))
+            2 => 0b111,                        // x² + x + 1
+            3 => 0b1011,                       // x³ + x + 1
+            4 => 0b10011,                      // x⁴ + x + 1
+            5 => 0b100101,                     // x⁵ + x² + 1
+            6 => 0b1000011,                    // x⁶ + x + 1
+            7 => 0b10000011,                   // x⁷ + x + 1
+            8 => 0b100011011,                  // x⁸ + x⁴ + x³ + x + 1
+            9 => 0b1000010001,                 // x⁹ + x⁴ + 1
+            10 => 0b10000001001,               // x¹⁰ + x³ + 1
+            11 => 0b100000000101,              // x¹¹ + x² + 1
+            12 => 0b1000001010011,             // x¹² + x⁶ + x⁴ + x + 1
+            13 => 0b10000000011011,            // x¹³ + x⁴ + x³ + x + 1
+            14 => 0b100000000101011,           // x¹⁴ + x⁵ + x³ + x + 1
+            15 => 0b1000000000000011,          // x¹⁵ + x + 1
+            16 => 0b10001000000001011,         // x¹⁶ + x¹² + x³ + x + 1
+            17 => 0b100000000000001001,        // x¹⁷ + x³ + 1
+            18 => 0b1000000000010000001,       // x¹⁸ + x⁷ + 1
+            19 => 0b10000000000000100111,      // x¹⁹ + x⁵ + x² + x + 1
+            20 => 0b100000000000000001001,     // x²⁰ + x³ + 1
+            21 => 0b1000000000000000000101,    // x²¹ + x² + 1
+            22 => 0b10000000000000000000011,   // x²² + x + 1
+            23 => 0b100000000000000000100001,  // x²³ + x⁵ + 1
+            24 => 0b1000000000000000010000111, // x²⁴ + x⁷ + x² + x + 1
             // Beyond K=24, the u64 bit patterns get unwieldy but still work up to K=63
             // For larger fields, consider using u128 or a polynomial representation
-            _ => panic!("Unsupported field extension degree (supported: K=1-24)")
+            _ => panic!("Unsupported field extension degree (supported: K=1-24)"),
         }
     }
 
@@ -341,7 +343,7 @@ impl<const K: usize> BinaryExtField<K> {
         let mut result = 0u64;
         let mut shifted_a = a;
         let mut b_temp = b;
-        
+
         while b_temp != 0 {
             if b_temp & 1 != 0 {
                 result ^= shifted_a;
@@ -422,7 +424,9 @@ impl<const K: usize> Add for BinaryExtField<K> {
     #[inline]
     fn add(self, rhs: Self) -> Self {
         // In GF(2^k), addition is XOR
-        Self { bits: self.bits ^ rhs.bits }
+        Self {
+            bits: self.bits ^ rhs.bits,
+        }
     }
 }
 
@@ -438,7 +442,9 @@ impl<const K: usize> Sub for BinaryExtField<K> {
     #[inline]
     fn sub(self, rhs: Self) -> Self {
         // In GF(2^k), subtraction is the same as addition (XOR)
-        Self { bits: self.bits ^ rhs.bits }
+        Self {
+            bits: self.bits ^ rhs.bits,
+        }
     }
 }
 
@@ -454,7 +460,9 @@ impl<const K: usize> Mul for BinaryExtField<K> {
     #[inline]
     fn mul(self, rhs: Self) -> Self {
         let product = Self::clmul(self.bits, rhs.bits);
-        Self { bits: Self::reduce(product) }
+        Self {
+            bits: Self::reduce(product),
+        }
     }
 }
 
@@ -585,8 +593,8 @@ mod tests {
         // GF(4) = {0, 1, α, α+1} where α² + α + 1 = 0
         let zero = GF4::zero();
         let one = GF4::one();
-        let alpha = GF4::gen();  // α = x, bits = 2
-        let alpha_plus_1 = GF4::new(3);  // α + 1, bits = 3
+        let alpha = GF4::gen(); // α = x, bits = 2
+        let alpha_plus_1 = GF4::new(3); // α + 1, bits = 3
 
         assert!(zero.is_zero());
         assert!(one.is_one());
@@ -599,15 +607,15 @@ mod tests {
         // In GF(4), addition is XOR
         let alpha = GF4::gen();
         let one = GF4::one();
-        
+
         // α + 1 = α + 1 (bits: 10 ^ 01 = 11)
         let result = alpha + one;
         assert_eq!(result.bits(), 3);
-        
+
         // α + α = 0
         let result = alpha + alpha;
         assert!(result.is_zero());
-        
+
         // (α + 1) + 1 = α
         let alpha_plus_1 = GF4::new(3);
         let result = alpha_plus_1 + one;
@@ -618,16 +626,16 @@ mod tests {
     fn test_gf4_multiplication() {
         // In GF(4), α² + α + 1 = 0, so α² = α + 1
         let alpha = GF4::gen();
-        
+
         // α * α = α² = α + 1
         let alpha_sq = alpha * alpha;
-        assert_eq!(alpha_sq.bits(), 3);  // α + 1 = bits 11 = 3
-        
+        assert_eq!(alpha_sq.bits(), 3); // α + 1 = bits 11 = 3
+
         // α * (α + 1) = α² + α = (α + 1) + α = 1
         let alpha_plus_1 = GF4::new(3);
         let result = alpha * alpha_plus_1;
         assert!(result.is_one());
-        
+
         // 1 * α = α
         let one = GF4::one();
         assert_eq!(one * alpha, alpha);
@@ -639,15 +647,15 @@ mod tests {
         // 1^(-1) = 1
         // α^(-1) = α + 1 (since α * (α+1) = 1)
         // (α+1)^(-1) = α
-        
+
         let one = GF4::one();
         let alpha = GF4::gen();
         let alpha_plus_1 = GF4::new(3);
-        
+
         assert_eq!(one.inv(), one);
         assert_eq!(alpha.inv(), alpha_plus_1);
         assert_eq!(alpha_plus_1.inv(), alpha);
-        
+
         // Verify: a * a^(-1) = 1
         assert!((alpha * alpha.inv()).is_one());
         assert!((alpha_plus_1 * alpha_plus_1.inv()).is_one());
@@ -657,10 +665,10 @@ mod tests {
     fn test_gf8_basic() {
         // GF(8) = GF(2^3), α³ + α + 1 = 0
         let alpha = GF8::gen();
-        
+
         // α³ = α + 1
         let alpha_cubed = alpha * alpha * alpha;
-        assert_eq!(alpha_cubed.bits(), 3);  // α + 1
+        assert_eq!(alpha_cubed.bits(), 3); // α + 1
     }
 
     #[test]
@@ -674,17 +682,17 @@ mod tests {
         // α^5 = α² + α + 1
         // α^6 = α² + 1
         // α^7 = 1 (generator of multiplicative group)
-        
+
         let alpha = GF8::gen();
-        
-        assert_eq!(alpha.pow(0).bits(), 1);     // 1
-        assert_eq!(alpha.pow(1).bits(), 2);     // α
-        assert_eq!(alpha.pow(2).bits(), 4);     // α²
-        assert_eq!(alpha.pow(3).bits(), 3);     // α + 1
-        assert_eq!(alpha.pow(4).bits(), 6);     // α² + α
-        assert_eq!(alpha.pow(5).bits(), 7);     // α² + α + 1
-        assert_eq!(alpha.pow(6).bits(), 5);     // α² + 1
-        assert_eq!(alpha.pow(7).bits(), 1);     // 1 (order divides 2^3-1=7)
+
+        assert_eq!(alpha.pow(0).bits(), 1); // 1
+        assert_eq!(alpha.pow(1).bits(), 2); // α
+        assert_eq!(alpha.pow(2).bits(), 4); // α²
+        assert_eq!(alpha.pow(3).bits(), 3); // α + 1
+        assert_eq!(alpha.pow(4).bits(), 6); // α² + α
+        assert_eq!(alpha.pow(5).bits(), 7); // α² + α + 1
+        assert_eq!(alpha.pow(6).bits(), 5); // α² + 1
+        assert_eq!(alpha.pow(7).bits(), 1); // 1 (order divides 2^3-1=7)
     }
 
     #[test]
@@ -711,11 +719,11 @@ mod tests {
     fn test_gf8_division() {
         let alpha = GF8::gen();
         let alpha_sq = alpha * alpha;
-        
+
         // α² / α = α
         let result = alpha_sq / alpha;
         assert_eq!(result, alpha);
-        
+
         // α / α = 1
         let result = alpha / alpha;
         assert!(result.is_one());
@@ -726,7 +734,7 @@ mod tests {
         // In characteristic 2, -a = a
         let alpha = GF4::gen();
         assert_eq!(-alpha, alpha);
-        
+
         let alpha_plus_1 = GF4::new(3);
         assert_eq!(-alpha_plus_1, alpha_plus_1);
     }
@@ -736,7 +744,7 @@ mod tests {
         // In characteristic 2, subtraction = addition
         let alpha = GF8::gen();
         let one = GF8::one();
-        
+
         let sum = alpha + one;
         let diff = alpha - one;
         assert_eq!(sum, diff);
@@ -754,11 +762,11 @@ mod tests {
     fn test_gf16_basic() {
         // GF(16) = GF(2^4), irreducible: x⁴ + x + 1
         let alpha = GF16::gen();
-        
+
         // α⁴ = α + 1 (from x⁴ + x + 1 = 0)
         let alpha_4 = alpha.pow(4);
-        assert_eq!(alpha_4.bits(), 3);  // α + 1 = bits 0011
-        
+        assert_eq!(alpha_4.bits(), 3); // α + 1 = bits 0011
+
         // Verify multiplicative group order: α^15 = 1
         assert!(alpha.pow(15).is_one());
     }
@@ -776,10 +784,10 @@ mod tests {
     fn test_gf256_basic() {
         // GF(256) = GF(2^8), irreducible: x⁸ + x⁴ + x³ + x + 1
         let alpha = GF256::gen();
-        
+
         // Verify multiplicative group order: α^255 = 1
         assert!(alpha.pow(255).is_one());
-        
+
         // Verify α^256 = α
         assert_eq!(alpha.pow(256), alpha);
     }
@@ -798,7 +806,7 @@ mod tests {
     fn test_gf65536_basic() {
         // GF(65536) = GF(2^16)
         let alpha = GF65536::gen();
-        
+
         // Verify multiplicative group order: α^(2^16-1) = α^65535 = 1
         assert!(alpha.pow(65535).is_one());
     }
@@ -818,12 +826,12 @@ mod tests {
         let alpha = GF65536::gen();
         let a = alpha.pow(1000);
         let b = alpha.pow(2000);
-        
+
         // Test associativity: (a * b) * b^-1 = a
         let ab = a * b;
         let result = ab * b.inv();
         assert_eq!(result, a);
-        
+
         // Test distribution: a * (b + 1) = a*b + a
         let one = GF65536::one();
         let left = a * (b + one);
@@ -831,4 +839,3 @@ mod tests {
         assert_eq!(left, right);
     }
 }
-

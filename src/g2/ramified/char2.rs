@@ -15,7 +15,7 @@
 use crate::field::Field;
 
 /// Curve constants for a characteristic 2 ramified genus 2 curve.
-/// 
+///
 /// Represents `y² + h(x)y = f(x)` where:
 /// - `f(x) = x⁵ + f2*x² + f1*x + f0`
 /// - `h(x) = h2*x² + h1*x + h0`
@@ -30,7 +30,7 @@ pub struct CurveConstants<F: Field> {
 }
 
 /// Result of divisor operations.
-/// 
+///
 /// Represents a divisor `(u(x), v(x))` where:
 /// - If `u2 == 1`: degree 2 divisor with `u = x² + u1*x + u0`, `v = v1*x + v0`
 /// - If `u2 == 0` and `u1 == 1`: degree 1 divisor with `u = x + u0`, `v = v0`
@@ -96,16 +96,16 @@ impl<F: Field> DivisorCoords<F> {
 }
 
 /// Add two degree 1 divisors (char 2).
-/// 
+///
 /// Input: `D1 = (x + u0, v0)`, `D2 = (x + up0, vp0)`
 /// Output: `D3 = D1 + D2`
-/// 
+///
 /// In char 2: subtraction = addition (XOR)
 #[inline]
 pub fn deg1_add<F: Field>(u0: F, v0: F, up0: F, vp0: F) -> DivisorCoords<F> {
     // d := u mod up = u0 + up0 (in char 2, - = +)
     let d = u0 + up0;
-    
+
     if d.is_zero() {
         return DivisorCoords::identity();
     }
@@ -138,7 +138,14 @@ pub fn deg12_add<F: Field>(
     vp0: F,
     cc: &CurveConstants<F>,
 ) -> DivisorCoords<F> {
-    let CurveConstants { f2, f1: _, f0: _, h2, h1, h0 } = *cc;
+    let CurveConstants {
+        f2,
+        f1: _,
+        f0: _,
+        h2,
+        h1,
+        h0,
+    } = *cc;
 
     // d := up mod u (in char 2)
     let t0 = u0 + up1;
@@ -185,7 +192,7 @@ pub fn deg12_add<F: Field>(
     // Compute result
     let upp1 = s0.square() + s0 * h2 + t0;
     let upp0 = s0 * (h2 * up1 + h1) + h2 * vp1 + up0 + up1 * u0 + upp1 * t0;
-    
+
     let vpp1 = s0 * (upp1 + up1) + h1 + vp1 + upp1 * h2;
     let vpp0 = s0 * (upp0 + up0) + h0 + vp0 + upp0 * h2;
 
@@ -208,13 +215,20 @@ pub fn deg2_add<F: Field>(
     vp0: F,
     cc: &CurveConstants<F>,
 ) -> DivisorCoords<F> {
-    let CurveConstants { f2, f1: _, f0: _, h2, h1, h0 } = *cc;
+    let CurveConstants {
+        f2,
+        f1: _,
+        f0: _,
+        h2,
+        h1,
+        h0,
+    } = *cc;
 
     // d := Resultant(u, up) computed with 2x2 system (in char 2)
-    let m3 = up1 + u1;  // = up1 - u1
-    let m4 = u0 + up0;  // = u0 - up0
+    let m3 = up1 + u1; // = up1 - u1
+    let m4 = u0 + up0; // = u0 - up0
     let m1 = m4 + up1 * m3;
-    let m2 = up0 * m3;  // Note: no minus sign in char 2
+    let m2 = up0 * m3; // Note: no minus sign in char 2
     let d = m1 * m4 + m2 * m3;
 
     // Special case: d = 0
@@ -244,7 +258,7 @@ pub fn deg2_add<F: Field>(
             let s0 = b2 * (k0 + u0_new * (k1 + u0_new * (u1 + u0_new)));
 
             // upp := u²
-            let upp1 = u0_new + u0_new;  // = 0 in char 2!
+            let upp1 = u0_new + u0_new; // = 0 in char 2!
             let upp0 = u0_new.square();
 
             // vpp := (v + u*s) mod upp
@@ -262,7 +276,7 @@ pub fn deg2_add<F: Field>(
 
         if dw3.is_zero() {
             // GCD divides (v + vp + h)
-            let a1 = m3.inv();  // No minus sign in char 2
+            let a1 = m3.inv(); // No minus sign in char 2
             let s1 = m4 * a1;
 
             let u0_new = u1 + s1;
@@ -298,8 +312,8 @@ pub fn deg2_add<F: Field>(
     }
 
     // General case: d != 0
-    let r0 = vp0 + v0;  // = vp0 - v0 in char 2
-    let r1 = vp1 + v1;  // = vp1 - v1 in char 2
+    let r0 = vp0 + v0; // = vp0 - v0 in char 2
+    let r1 = vp1 + v1; // = vp1 - v1 in char 2
     let sp1 = r0 * m3 + r1 * m4;
     let sp0 = r0 * m1 + r1 * m2;
 
@@ -322,7 +336,14 @@ fn deg2_add_common<F: Field>(
     d: F,
     cc: &CurveConstants<F>,
 ) -> DivisorCoords<F> {
-    let CurveConstants { f2: _, f1: _, f0: _, h2, h1, h0 } = *cc;
+    let CurveConstants {
+        f2: _,
+        f1: _,
+        f0: _,
+        h2,
+        h1,
+        h0,
+    } = *cc;
     let vh1 = v1 + h1;
 
     if sp1.is_zero() {
@@ -359,22 +380,29 @@ fn deg2_add_common<F: Field>(
 ///
 /// Input: `D = (x + u0, v0)`
 /// Output: `2D`
-/// 
+///
 /// In char 2: 2v = 0
 #[inline]
 pub fn deg1_dbl<F: Field>(u0: F, v0: F, cc: &CurveConstants<F>) -> DivisorCoords<F> {
-    let CurveConstants { f2: _, f1, f0: _, h2, h1, h0 } = *cc;
+    let CurveConstants {
+        f2: _,
+        f1,
+        f0: _,
+        h2,
+        h1,
+        h0,
+    } = *cc;
 
     // upp := u²
     let upp0 = u0.square();
 
     // d := h mod u (since 2v = 0 in char 2)
     let d = h2 * upp0 + h1 * u0 + h0;
-    
+
     if d.is_zero() {
         return DivisorCoords::identity();
     }
-    
+
     // b1 := d^-1
     let w1 = d.inv();
 
@@ -394,14 +422,21 @@ pub fn deg1_dbl<F: Field>(u0: F, v0: F, cc: &CurveConstants<F>) -> DivisorCoords
 /// Output: `2D`
 #[inline]
 pub fn deg2_dbl<F: Field>(u1: F, u0: F, v1: F, v0: F, cc: &CurveConstants<F>) -> DivisorCoords<F> {
-    let CurveConstants { f2, f1: _, f0: _, h2, h1, h0 } = *cc;
+    let CurveConstants {
+        f2,
+        f1: _,
+        f0: _,
+        h2,
+        h1,
+        h0,
+    } = *cc;
 
     // d := Resultant(u, h) since 2v = 0 in char 2
     // Computed with 2x2 system
     let m3 = h1 + h2 * u1;
     let m4 = h0 + h2 * u0;
     let m1 = m4 + m3 * u1;
-    let m2 = m3 * u0;  // No minus sign in char 2
+    let m2 = m3 * u0; // No minus sign in char 2
     let d = m4 * m1 + m2 * m3;
 
     // Special case: d = 0
@@ -424,7 +459,7 @@ pub fn deg2_dbl<F: Field>(u1: F, u0: F, v1: F, v0: F, cc: &CurveConstants<F>) ->
         let s0 = b1 * (k0 + u0_new * (k1 + u0_new * (u1 + u0_new)));
 
         // upp := u²
-        let upp1 = u0_new + u0_new;  // = 0 in char 2
+        let upp1 = u0_new + u0_new; // = 0 in char 2
         let upp0 = u0_new.square();
 
         // vpp := (v + u*s) mod upp
@@ -446,7 +481,7 @@ pub fn deg2_dbl<F: Field>(u1: F, u0: F, v1: F, v0: F, cc: &CurveConstants<F>) ->
     if sp1.is_zero() {
         let w1 = d.inv();
         let s0 = sp0 * w1;
-  
+
         let upp0 = s0.square() + s0 * h2;
 
         let t1 = s0 * (u1 + upp0) + h2 * upp0 + v1 + h1;
@@ -476,7 +511,11 @@ pub fn deg2_dbl<F: Field>(u1: F, u0: F, v1: F, v0: F, cc: &CurveConstants<F>) ->
 
 /// Add two divisors of arbitrary degree.
 #[inline]
-pub fn add<F: Field>(d1: &DivisorCoords<F>, d2: &DivisorCoords<F>, cc: &CurveConstants<F>) -> DivisorCoords<F> {
+pub fn add<F: Field>(
+    d1: &DivisorCoords<F>,
+    d2: &DivisorCoords<F>,
+    cc: &CurveConstants<F>,
+) -> DivisorCoords<F> {
     match (d1.degree(), d2.degree()) {
         (0, _) => *d2,
         (_, 0) => *d1,
@@ -515,29 +554,29 @@ mod tests {
     /// Create a GF(4) curve from the Magma whitebox tester:
     /// f = x^5 + α*x² + α²*x, h = x² + α*x + α
     fn make_gf4_curve_1() -> CurveConstants<GF4> {
-        let alpha = GF4::gen();        // α (bits = 2)
-        let alpha_sq = alpha * alpha;  // α² = α + 1 (bits = 3)
+        let alpha = GF4::gen(); // α (bits = 2)
+        let alpha_sq = alpha * alpha; // α² = α + 1 (bits = 3)
         CurveConstants {
-            f2: alpha,          // f2 = α
-            f1: alpha_sq,       // f1 = α²
-            f0: GF4::zero(),    // f0 = 0
-            h2: GF4::one(),     // h2 = 1
-            h1: alpha,          // h1 = α
-            h0: alpha,          // h0 = α
+            f2: alpha,       // f2 = α
+            f1: alpha_sq,    // f1 = α²
+            f0: GF4::zero(), // f0 = 0
+            h2: GF4::one(),  // h2 = 1
+            h1: alpha,       // h1 = α
+            h0: alpha,       // h0 = α
         }
     }
 
     /// Create a second GF(4) curve:
     /// f = x^5 + x² + α²*x + 1, h = x² + x
     fn make_gf4_curve_2() -> CurveConstants<GF4> {
-        let alpha_sq = GF4::new(3);    // α² = α + 1
+        let alpha_sq = GF4::new(3); // α² = α + 1
         CurveConstants {
-            f2: GF4::one(),     // f2 = 1
-            f1: alpha_sq,       // f1 = α²
-            f0: GF4::one(),     // f0 = 1
-            h2: GF4::one(),     // h2 = 1
-            h1: GF4::one(),     // h1 = 1
-            h0: GF4::zero(),    // h0 = 0
+            f2: GF4::one(),  // f2 = 1
+            f1: alpha_sq,    // f1 = α²
+            f0: GF4::one(),  // f0 = 1
+            h2: GF4::one(),  // h2 = 1
+            h1: GF4::one(),  // h1 = 1
+            h0: GF4::zero(), // h0 = 0
         }
     }
 
@@ -549,15 +588,15 @@ mod tests {
     /// f = x^5 + α*x² + α²*x + α, h = x² + α⁶*x + α
     fn make_gf8_curve_1() -> CurveConstants<GF8> {
         let alpha = GF8::gen();
-        let alpha_sq = alpha.pow(2);   // α²
-        let alpha_6 = alpha.pow(6);    // α⁶
+        let alpha_sq = alpha.pow(2); // α²
+        let alpha_6 = alpha.pow(6); // α⁶
         CurveConstants {
-            f2: alpha,          // f2 = α
-            f1: alpha_sq,       // f1 = α²
-            f0: alpha,          // f0 = α
-            h2: GF8::one(),     // h2 = 1
-            h1: alpha_6,        // h1 = α⁶
-            h0: alpha,          // h0 = α
+            f2: alpha,      // f2 = α
+            f1: alpha_sq,   // f1 = α²
+            f0: alpha,      // f0 = α
+            h2: GF8::one(), // h2 = 1
+            h1: alpha_6,    // h1 = α⁶
+            h0: alpha,      // h0 = α
         }
     }
 
@@ -627,13 +666,13 @@ mod tests {
         let cc = make_gf4_curve_1();
         let alpha = GF4::gen();
         let alpha_sq = alpha * alpha;
-        
+
         // U1 = x² + α*x + 1: u1 = α, u0 = 1
         // V1 = α*x + α²: v1 = α, v0 = α²
         let d = DivisorCoords::deg2(alpha, GF4::one(), alpha, alpha_sq);
-        
+
         let result = double(&d, &cc);
-        
+
         // Result should be a valid divisor (degree 0, 1, or 2)
         assert!(result.degree() <= 2);
     }
@@ -646,13 +685,13 @@ mod tests {
     fn test_gf4_dbl_d_zero() {
         let cc = make_gf4_curve_2();
         let alpha = GF4::gen();
-        
+
         // U1 = x² + α*x + 0: u1 = α, u0 = 0
         // V1 = 0*x + 1: v1 = 0, v0 = 1
         let d = DivisorCoords::deg2(alpha, GF4::zero(), GF4::zero(), GF4::one());
-        
+
         let result = double(&d, &cc);
-        
+
         // Result should be a valid divisor
         assert!(result.degree() <= 2);
     }
@@ -668,13 +707,13 @@ mod tests {
         let alpha_3 = alpha.pow(3);
         let alpha_4 = alpha.pow(4);
         let alpha_5 = alpha.pow(5);
-        
+
         // U1 = x² + α⁵*x + α³: u1 = α⁵, u0 = α³
         // V1 = α⁴*x + α: v1 = α⁴, v0 = α
         let d = DivisorCoords::deg2(alpha_5, alpha_3, alpha_4, alpha);
-        
+
         let result = double(&d, &cc);
-        
+
         // Result should be a valid divisor
         assert!(result.degree() <= 2);
     }
@@ -688,12 +727,12 @@ mod tests {
         let alpha = GF8::gen();
         let alpha_2 = alpha.pow(2);
         let alpha_4 = alpha.pow(4);
-        
+
         let d1 = DivisorCoords::deg1(alpha_2, alpha_4);
         let id = DivisorCoords::identity();
-        
+
         let result = add(&d1, &id, &cc);
-        
+
         // Adding identity should return the same divisor
         assert_eq!(result, d1);
     }
@@ -706,22 +745,22 @@ mod tests {
         let cc = make_gf8_curve_1();
         let alpha = GF8::gen();
         let alpha_4 = alpha.pow(4);
-        
+
         // Different curve constants for this test
         let cc_test = CurveConstants {
-            f2: alpha.pow(3),      // α³
-            f1: alpha.pow(2),      // α²
-            f0: alpha.pow(3),      // α³
+            f2: alpha.pow(3), // α³
+            f1: alpha.pow(2), // α²
+            f0: alpha.pow(3), // α³
             h2: GF8::one(),
-            h1: alpha.pow(4),      // α⁴
-            h0: alpha.pow(4),      // α⁴
+            h1: alpha.pow(4), // α⁴
+            h0: alpha.pow(4), // α⁴
         };
-        
+
         let d1 = DivisorCoords::deg2(alpha, GF8::zero(), alpha_4, alpha);
         let id = DivisorCoords::identity();
-        
+
         let result = add(&d1, &id, &cc_test);
-        
+
         // Adding identity should return the same divisor
         assert_eq!(result, d1);
     }
@@ -737,7 +776,7 @@ mod tests {
         let alpha_3 = alpha.pow(3);
         let alpha_5 = alpha.pow(5);
         let alpha_6 = alpha.pow(6);
-        
+
         let cc = CurveConstants {
             f2: alpha_5,
             f1: alpha,
@@ -746,13 +785,13 @@ mod tests {
             h1: GF8::zero(),
             h0: alpha_5,
         };
-        
+
         // Same u0 means they differ only in v
         let d1 = DivisorCoords::deg1(alpha_3, alpha_5);
         let d2 = DivisorCoords::deg1(alpha_3, alpha_6);
-        
+
         let result = add(&d1, &d2, &cc);
-        
+
         // When u is the same and v differs, result depends on v + v' + h
         assert!(result.degree() <= 2);
     }
@@ -765,7 +804,7 @@ mod tests {
     fn test_gf4_add_deg1_to_deg2() {
         let alpha = GF4::gen();
         let alpha_sq = alpha * alpha;
-        
+
         let cc = CurveConstants {
             f2: GF4::zero(),
             f1: alpha,
@@ -774,14 +813,14 @@ mod tests {
             h1: GF4::one(),
             h0: GF4::zero(),
         };
-        
+
         // D1 = (x + 1, α): u0 = 1, v0 = α
         // D2 = (x + 0, α²): u0 = 0, v0 = α²
         let d1 = DivisorCoords::deg1(GF4::one(), alpha);
         let d2 = DivisorCoords::deg1(GF4::zero(), alpha_sq);
-        
+
         let result = add(&d1, &d2, &cc);
-        
+
         // Different u0 values should produce a deg2 result
         assert_eq!(result.degree(), 2);
     }
@@ -792,7 +831,7 @@ mod tests {
     #[test]
     fn test_gf8_add_deg2_deg2() {
         let alpha = GF8::gen();
-        
+
         let cc = CurveConstants {
             f2: alpha.pow(2),
             f1: GF8::one(),
@@ -801,15 +840,15 @@ mod tests {
             h1: alpha.pow(5),
             h0: alpha.pow(6),
         };
-        
+
         // D1 = (x² + α³*x + α⁵, 1)
         let d1 = DivisorCoords::deg2(alpha.pow(3), alpha.pow(5), GF8::zero(), GF8::one());
-        
+
         // D2 = (x² + α⁶*x + 1, α⁶*x + α⁴)
         let d2 = DivisorCoords::deg2(alpha.pow(6), GF8::one(), alpha.pow(6), alpha.pow(4));
-        
+
         let result = add(&d1, &d2, &cc);
-        
+
         // Result should be a valid divisor
         assert!(result.degree() <= 2);
     }
@@ -820,7 +859,7 @@ mod tests {
     #[test]
     fn test_gf8_add_deg1_deg2() {
         let alpha = GF8::gen();
-        
+
         let cc = CurveConstants {
             f2: alpha.pow(2),
             f1: GF8::one(),
@@ -829,12 +868,12 @@ mod tests {
             h1: alpha.pow(5),
             h0: alpha.pow(6),
         };
-        
+
         let d1 = DivisorCoords::deg1(alpha.pow(4), alpha.pow(6));
         let d2 = DivisorCoords::deg2(alpha.pow(2), alpha.pow(3), GF8::zero(), alpha.pow(4));
-        
+
         let result = add(&d1, &d2, &cc);
-        
+
         // Result should be a valid divisor
         assert!(result.degree() <= 2);
     }
@@ -854,13 +893,13 @@ mod tests {
             h1: GF4::one(),
             h0: GF4::zero(),
         };
-        
+
         // Create two different deg1 divisors and add them
         let d1 = DivisorCoords::deg1(GF4::one(), alpha);
         let d2 = DivisorCoords::deg1(GF4::zero(), alpha * alpha);
-        
+
         let sum = add(&d1, &d2, &cc);
-        
+
         // The result should be valid
         assert!(sum.degree() <= 2);
     }
@@ -869,16 +908,15 @@ mod tests {
     fn test_gf8_double_closure() {
         let alpha = GF8::gen();
         let cc = make_gf8_curve_1();
-        
+
         let d = DivisorCoords::deg2(alpha.pow(5), alpha.pow(3), alpha.pow(4), alpha);
-        
+
         // Double should produce a valid result
         let doubled = double(&d, &cc);
         assert!(doubled.degree() <= 2);
-        
+
         // Double again should also be valid
         let quadrupled = double(&doubled, &cc);
         assert!(quadrupled.degree() <= 2);
     }
 }
-

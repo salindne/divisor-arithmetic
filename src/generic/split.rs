@@ -66,17 +66,17 @@ impl<F: Field> Divisor<F> {
 pub fn compute_vpl<F: Field>(f: &Poly<F>, g: usize) -> Poly<F> {
     // Leading coefficient of f (degree 2g+2)
     let fl = f.coeff(2 * g + 2);
-    
+
     // Leading term of Vpl is solution of fl - x² = 0
     // We need a square root of fl. For odd characteristic, use Tonelli-Shanks
     // or just try fl^((p+1)/4) for p ≡ 3 (mod 4)
     // For simplicity, we'll factor x² - fl and take the negative of the constant term
     // This is a simplified approach - in practice you'd need proper square root
-    
+
     // For now, we compute iteratively as in the Magma code
     // Vl := -Coeff(Factorization(fl - x^2)[2][1], 0)
     // This requires factorization which is complex
-    
+
     // Simplified: assume fl = 1 (monic f), so Vl = 1 or -1
     // For a proper implementation, we'd need square root in the field
     let vl = if fl.is_one() {
@@ -86,13 +86,13 @@ pub fn compute_vpl<F: Field>(f: &Poly<F>, g: usize) -> Poly<F> {
         // This is a simplification - proper implementation would use Tonelli-Shanks
         fl // Placeholder - this won't be correct for non-trivial cases
     };
-    
+
     let mut vpl = Poly::monomial(vl, g + 1);
-    
+
     // dinv := (2*Vl)^-1
     let two = F::one() + F::one();
     let dinv = (two * vl).inv();
-    
+
     // Work down one term at a time
     for i in (0..=g).rev() {
         // Vpl += dinv * Coeff(f - Vpl², g+1+i) * x^i
@@ -102,7 +102,7 @@ pub fn compute_vpl<F: Field>(f: &Poly<F>, g: usize) -> Poly<F> {
         let term = Poly::monomial(dinv * coeff, i);
         vpl = vpl + term;
     }
-    
+
     vpl
 }
 
@@ -122,7 +122,7 @@ pub fn adjust_neg<F: Field>(
         while d.n < 0 {
             let ou = d.u.clone();
             d.u = d.w.clone();
-            
+
             let v_plus_v_neg = &d.v + v_neg;
             let (q, r) = v_plus_v_neg.div_rem(&d.u);
             let tv = v_neg - &r;
@@ -276,12 +276,7 @@ pub fn add_neg<F: Field>(
 /// Double a divisor on a split curve (negative reduced basis).
 ///
 /// Implements `Double_SPLIT_NEG` from Magma.
-pub fn double_neg<F: Field>(
-    d1: &Divisor<F>,
-    f: &Poly<F>,
-    v_neg: &Poly<F>,
-    g: usize,
-) -> Divisor<F> {
+pub fn double_neg<F: Field>(d1: &Divisor<F>, f: &Poly<F>, v_neg: &Poly<F>, g: usize) -> Divisor<F> {
     let u1 = &d1.u;
     let v1 = &d1.v;
     let w1 = &d1.w;
@@ -521,12 +516,7 @@ pub fn add_pos<F: Field>(
 /// Double a divisor on a split curve (positive reduced basis).
 ///
 /// Implements `Double_SPLIT_POS` from Magma.
-pub fn double_pos<F: Field>(
-    d1: &Divisor<F>,
-    f: &Poly<F>,
-    v_pos: &Poly<F>,
-    g: usize,
-) -> Divisor<F> {
+pub fn double_pos<F: Field>(d1: &Divisor<F>, f: &Poly<F>, v_pos: &Poly<F>, g: usize) -> Divisor<F> {
     let u1 = &d1.u;
     let v1 = &d1.v;
     let w1 = &d1.w;
@@ -621,27 +611,23 @@ mod tests {
         for a_val in 0..7u64 {
             let a = F7::new(a_val);
             let fa = f.eval(a);
-            
+
             // Check if fa is a square in F7
             if fa.is_zero() || fa.pow(3).is_one() {
-                let b = if fa.is_zero() {
-                    F7::zero()
-                } else {
-                    fa.pow(2)
-                };
-                
+                let b = if fa.is_zero() { F7::zero() } else { fa.pow(2) };
+
                 if b * b == fa {
                     // u = x - a
                     let u = poly(&[(7 - a_val) % 7, 1]); // x - a = x + (-a)
-                    
+
                     // v should be in reduced basis form: vpl - (vpl - b) mod u
                     let b_poly = Poly::constant(b);
                     let vpl_minus_b = vpl - &b_poly;
                     let v = vpl - &vpl_minus_b.rem(&u);
-                    
+
                     let v_sq = &v * &v;
                     let diff = f - &v_sq;
-                    
+
                     // Check divisibility
                     let (_, rem) = diff.div_rem(&u);
                     if rem.is_zero() {
@@ -661,10 +647,10 @@ mod tests {
         let f = test_curve_g2_split();
         let g = 2;
         let vpl = compute_vpl(&f, g);
-        
+
         // Vpl should have degree g+1 = 3
         assert_eq!(vpl.deg(), 3);
-        
+
         // f - Vpl² should have degree ≤ g = 2
         let vpl_sq = &vpl * &vpl;
         let diff = f - vpl_sq;
@@ -677,7 +663,7 @@ mod tests {
         let g = 2;
         let vpl = compute_vpl(&f, g);
         let neutral = Divisor::neutral(&f, &vpl, g);
-        
+
         assert!(neutral.u.is_one());
         assert_eq!(neutral.v, vpl);
     }
@@ -687,12 +673,12 @@ mod tests {
         let f = test_curve_g2_split();
         let g = 2;
         let vpl = compute_vpl(&f, g);
-        
+
         if let Some(d) = find_valid_split_divisor(&f, &vpl, g) {
             // Double should produce a valid divisor
             let doubled = double_pos(&d, &f, &vpl, g);
             assert!(doubled.u.deg() <= g as i32);
-            
+
             // Verify w = (f - v²) / u
             let v_sq = &doubled.v * &doubled.v;
             let expected_w = (f - v_sq).exact_div(&doubled.u);
@@ -706,7 +692,7 @@ mod tests {
         let g = 2;
         let vpl = compute_vpl(&f, g);
         let v_neg = -vpl.clone();
-        
+
         if let Some(mut d) = find_valid_split_divisor(&f, &vpl, g) {
             // Convert to negative basis form
             let t = &v_neg - &vpl;
@@ -714,11 +700,11 @@ mod tests {
             let tv = &d.v + &t - r;
             d.w = d.w - q * (&d.v + &tv);
             d.v = tv;
-            
+
             // Double should produce a valid divisor
             let doubled = double_neg(&d, &f, &v_neg, g);
             assert!(doubled.u.deg() <= g as i32);
-            
+
             // Verify w = (f - v²) / u
             let v_sq = &doubled.v * &doubled.v;
             let expected_w = (f - v_sq).exact_div(&doubled.u);
@@ -732,12 +718,12 @@ mod tests {
         let g = 2;
         let vpl = compute_vpl(&f, g);
         let neutral = Divisor::neutral(&f, &vpl, g);
-        
+
         if let Some(d) = find_valid_split_divisor(&f, &vpl, g) {
             // D + 0 should give valid reduced divisor
             let result = add_pos(&d, &neutral, &f, &vpl, g);
             assert!(result.u.deg() <= g as i32);
-            
+
             // Verify w = (f - v²) / u
             let v_sq = &result.v * &result.v;
             let expected_w = (f - v_sq).exact_div(&result.u);
@@ -750,14 +736,13 @@ mod tests {
         let f = test_curve_g2_split();
         let g = 2;
         let vpl = compute_vpl(&f, g);
-        
+
         if let Some(d) = find_valid_split_divisor(&f, &vpl, g) {
             // 2D via double should give same u polynomial as D + D via add
             let doubled = double_pos(&d, &f, &vpl, g);
             let added = add_pos(&d, &d, &f, &vpl, g);
-            
+
             assert_eq!(doubled.u, added.u);
         }
     }
 }
-

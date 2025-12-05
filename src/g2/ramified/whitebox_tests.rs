@@ -31,9 +31,14 @@ mod arbitrary_tests {
     #[test]
     fn test_arb_dbl_01_identity() {
         let cc = CurveConstants {
-            f4: F5::new(3), f3: F5::new(3), f2: F5::new(1),
-            f1: F5::new(3), f0: F5::new(1),
-            h2: F5::zero(), h1: F5::new(3), h0: F5::new(3),
+            f4: F5::new(3),
+            f3: F5::new(3),
+            f2: F5::new(1),
+            f1: F5::new(3),
+            f0: F5::new(1),
+            h2: F5::zero(),
+            h1: F5::new(3),
+            h0: F5::new(3),
         };
         let d = DivisorCoords::<F5>::identity();
         let result = double(&d, &cc);
@@ -46,9 +51,14 @@ mod arbitrary_tests {
     #[test]
     fn test_arb_dbl_02_deg2() {
         let cc = CurveConstants {
-            f4: F5::new(2), f3: F5::new(3), f2: F5::new(1),
-            f1: F5::new(2), f0: F5::new(2),
-            h2: F5::zero(), h1: F5::new(3), h0: F5::zero(),
+            f4: F5::new(2),
+            f3: F5::new(3),
+            f2: F5::new(1),
+            f1: F5::new(2),
+            f0: F5::new(2),
+            h2: F5::zero(),
+            h1: F5::new(3),
+            h0: F5::zero(),
         };
         let d = DivisorCoords::deg2(F5::new(3), F5::new(4), F5::new(2), F5::new(1));
         let result = double(&d, &cc);
@@ -61,9 +71,14 @@ mod arbitrary_tests {
     #[test]
     fn test_arb_dbl_03_deg2_h2() {
         let cc = CurveConstants {
-            f4: F3::new(1), f3: F3::zero(), f2: F3::new(1),
-            f1: F3::new(1), f0: F3::new(1),
-            h2: F3::new(1), h1: F3::new(2), h0: F3::new(2),
+            f4: F3::new(1),
+            f3: F3::zero(),
+            f2: F3::new(1),
+            f1: F3::new(1),
+            f0: F3::new(1),
+            h2: F3::new(1),
+            h1: F3::new(2),
+            h0: F3::new(2),
         };
         let d = DivisorCoords::deg2(F3::zero(), F3::new(1), F3::new(2), F3::new(2));
         let result = double(&d, &cc);
@@ -76,9 +91,14 @@ mod arbitrary_tests {
     #[test]
     fn test_arb_dbl_04_d_zero() {
         let cc = CurveConstants {
-            f4: F3::zero(), f3: F3::new(1), f2: F3::zero(),
-            f1: F3::new(2), f0: F3::zero(),
-            h2: F3::new(1), h1: F3::new(1), h0: F3::zero(),
+            f4: F3::zero(),
+            f3: F3::new(1),
+            f2: F3::zero(),
+            f1: F3::new(2),
+            f0: F3::zero(),
+            h2: F3::new(1),
+            h1: F3::new(1),
+            h0: F3::zero(),
         };
         let d = DivisorCoords::deg2(F3::zero(), F3::new(1), F3::new(1), F3::new(2));
         let result = double(&d, &cc);
@@ -91,9 +111,14 @@ mod arbitrary_tests {
     #[test]
     fn test_arb_dbl_05_sp1_zero() {
         let cc = CurveConstants {
-            f4: F5::new(4), f3: F5::new(1), f2: F5::new(3),
-            f1: F5::new(2), f0: F5::new(3),
-            h2: F5::zero(), h1: F5::zero(), h0: F5::new(1),
+            f4: F5::new(4),
+            f3: F5::new(1),
+            f2: F5::new(3),
+            f1: F5::new(2),
+            f0: F5::new(3),
+            h2: F5::zero(),
+            h1: F5::zero(),
+            h0: F5::new(1),
         };
         let d = DivisorCoords::deg2(F5::new(3), F5::new(2), F5::new(2), F5::new(4));
         let result = double(&d, &cc);
@@ -106,9 +131,14 @@ mod arbitrary_tests {
     #[test]
     fn test_arb_dbl_06_deg1() {
         let cc = CurveConstants {
-            f4: F5::new(2), f3: F5::new(3), f2: F5::new(1),
-            f1: F5::new(2), f0: F5::new(2),
-            h2: F5::zero(), h1: F5::new(3), h0: F5::zero(),
+            f4: F5::new(2),
+            f3: F5::new(3),
+            f2: F5::new(1),
+            f1: F5::new(2),
+            f0: F5::new(2),
+            h2: F5::zero(),
+            h1: F5::new(3),
+            h0: F5::zero(),
         };
         let d = DivisorCoords::deg1(F5::new(1), F5::new(4));
         let result = double(&d, &cc);
@@ -121,9 +151,14 @@ mod arbitrary_tests {
     #[test]
     fn test_arb_dbl_07_deg1() {
         let cc = CurveConstants {
-            f4: F5::new(1), f3: F5::new(3), f2: F5::new(1),
-            f1: F5::new(3), f0: F5::new(3),
-            h2: F5::zero(), h1: F5::zero(), h0: F5::new(2),
+            f4: F5::new(1),
+            f3: F5::new(3),
+            f2: F5::new(1),
+            f1: F5::new(3),
+            f0: F5::new(3),
+            h2: F5::zero(),
+            h1: F5::zero(),
+            h0: F5::new(2),
         };
         let d = DivisorCoords::deg1(F5::new(3), F5::zero());
         let result = double(&d, &cc);
@@ -141,9 +176,14 @@ mod arbitrary_tests {
         let alpha = GF4::gen();
         let alpha_sq = alpha * alpha;
         let cc = CurveConstants {
-            f4: alpha, f3: GF4::one(), f2: alpha_sq,
-            f1: GF4::zero(), f0: alpha,
-            h2: GF4::one(), h1: alpha_sq, h0: GF4::zero(),
+            f4: alpha,
+            f3: GF4::one(),
+            f2: alpha_sq,
+            f1: GF4::zero(),
+            f0: alpha,
+            h2: GF4::one(),
+            h1: alpha_sq,
+            h0: GF4::zero(),
         };
         let d1 = DivisorCoords::deg1(GF4::one(), alpha_sq);
         let d2 = DivisorCoords::identity();
@@ -155,9 +195,14 @@ mod arbitrary_tests {
     #[test]
     fn test_arb_add_09_deg2_identity() {
         let cc = CurveConstants {
-            f4: F5::new(3), f3: F5::new(3), f2: F5::new(4),
-            f1: F5::new(4), f0: F5::new(3),
-            h2: F5::new(1), h1: F5::new(1), h0: F5::new(1),
+            f4: F5::new(3),
+            f3: F5::new(3),
+            f2: F5::new(4),
+            f1: F5::new(4),
+            f0: F5::new(3),
+            h2: F5::new(1),
+            h1: F5::new(1),
+            h0: F5::new(1),
         };
         let d1 = DivisorCoords::deg2(F5::new(2), F5::new(1), F5::new(3), F5::new(1));
         let d2 = DivisorCoords::identity();
@@ -169,9 +214,14 @@ mod arbitrary_tests {
     #[test]
     fn test_arb_add_10_deg2_deg2() {
         let cc = CurveConstants {
-            f4: F3::new(1), f3: F3::zero(), f2: F3::new(1),
-            f1: F3::new(1), f0: F3::new(1),
-            h2: F3::new(1), h1: F3::new(2), h0: F3::new(2),
+            f4: F3::new(1),
+            f3: F3::zero(),
+            f2: F3::new(1),
+            f1: F3::new(1),
+            f0: F3::new(1),
+            h2: F3::new(1),
+            h1: F3::new(2),
+            h0: F3::new(2),
         };
         let d1 = DivisorCoords::deg2(F3::zero(), F3::new(1), F3::new(2), F3::new(2));
         let d2 = DivisorCoords::deg2(F3::new(2), F3::new(2), F3::new(2), F3::zero());
@@ -183,9 +233,14 @@ mod arbitrary_tests {
     #[test]
     fn test_arb_add_11_deg2_deg2_res() {
         let cc = CurveConstants {
-            f4: F3::zero(), f3: F3::new(1), f2: F3::new(1),
-            f1: F3::new(2), f0: F3::zero(),
-            h2: F3::zero(), h1: F3::new(2), h0: F3::new(1),
+            f4: F3::zero(),
+            f3: F3::new(1),
+            f2: F3::new(1),
+            f1: F3::new(2),
+            f0: F3::zero(),
+            h2: F3::zero(),
+            h1: F3::new(2),
+            h0: F3::new(1),
         };
         let d1 = DivisorCoords::deg2(F3::new(2), F3::new(1), F3::zero(), F3::new(1));
         let d2 = DivisorCoords::deg2(F3::zero(), F3::new(1), F3::new(1), F3::new(1));
@@ -197,9 +252,14 @@ mod arbitrary_tests {
     #[test]
     fn test_arb_add_12_identity_deg2() {
         let cc = CurveConstants {
-            f4: F5::new(3), f3: F5::new(3), f2: F5::new(1),
-            f1: F5::new(3), f0: F5::new(1),
-            h2: F5::zero(), h1: F5::new(3), h0: F5::new(3),
+            f4: F5::new(3),
+            f3: F5::new(3),
+            f2: F5::new(1),
+            f1: F5::new(3),
+            f0: F5::new(1),
+            h2: F5::zero(),
+            h1: F5::new(3),
+            h0: F5::new(3),
         };
         let d1 = DivisorCoords::identity();
         let d2 = DivisorCoords::deg2(F5::new(4), F5::new(2), F5::new(2), F5::zero());
@@ -211,9 +271,14 @@ mod arbitrary_tests {
     #[test]
     fn test_arb_add_13_deg2_deg2_same_v() {
         let cc = CurveConstants {
-            f4: F7::zero(), f3: F7::zero(), f2: F7::new(2),
-            f1: F7::new(2), f0: F7::new(1),
-            h2: F7::new(1), h1: F7::new(5), h0: F7::new(2),
+            f4: F7::zero(),
+            f3: F7::zero(),
+            f2: F7::new(2),
+            f1: F7::new(2),
+            f0: F7::new(1),
+            h2: F7::new(1),
+            h1: F7::new(5),
+            h0: F7::new(2),
         };
         let d1 = DivisorCoords::deg2(F7::zero(), F7::new(6), F7::new(2), F7::new(2));
         let d2 = DivisorCoords::deg2(F7::new(1), F7::zero(), F7::new(2), F7::new(2));
@@ -225,9 +290,14 @@ mod arbitrary_tests {
     #[test]
     fn test_arb_add_14_deg2_deg2() {
         let cc = CurveConstants {
-            f4: F5::new(3), f3: F5::new(3), f2: F5::new(4),
-            f1: F5::new(4), f0: F5::new(3),
-            h2: F5::new(1), h1: F5::new(1), h0: F5::new(1),
+            f4: F5::new(3),
+            f3: F5::new(3),
+            f2: F5::new(4),
+            f1: F5::new(4),
+            f0: F5::new(3),
+            h2: F5::new(1),
+            h1: F5::new(1),
+            h0: F5::new(1),
         };
         let d1 = DivisorCoords::deg2(F5::new(3), F5::new(2), F5::zero(), F5::new(3));
         let d2 = DivisorCoords::deg2(F5::new(4), F5::new(4), F5::new(3), F5::new(4));
@@ -239,9 +309,14 @@ mod arbitrary_tests {
     #[test]
     fn test_arb_add_15_deg1_deg2() {
         let cc = CurveConstants {
-            f4: F5::new(1), f3: F5::new(3), f2: F5::new(1),
-            f1: F5::new(3), f0: F5::new(3),
-            h2: F5::zero(), h1: F5::zero(), h0: F5::new(2),
+            f4: F5::new(1),
+            f3: F5::new(3),
+            f2: F5::new(1),
+            f1: F5::new(3),
+            f0: F5::new(3),
+            h2: F5::zero(),
+            h1: F5::zero(),
+            h0: F5::new(2),
         };
         let d1 = DivisorCoords::deg1(F5::new(3), F5::zero());
         let d2 = DivisorCoords::deg2(F5::new(3), F5::new(4), F5::new(2), F5::new(1));
@@ -255,9 +330,14 @@ mod arbitrary_tests {
         let alpha = GF4::gen();
         let alpha_sq = alpha * alpha;
         let cc = CurveConstants {
-            f4: GF4::zero(), f3: GF4::one(), f2: GF4::zero(),
-            f1: GF4::zero(), f0: GF4::one(),
-            h2: GF4::one(), h1: GF4::zero(), h0: GF4::one(),
+            f4: GF4::zero(),
+            f3: GF4::one(),
+            f2: GF4::zero(),
+            f1: GF4::zero(),
+            f0: GF4::one(),
+            h2: GF4::one(),
+            h1: GF4::zero(),
+            h0: GF4::one(),
         };
         let d1 = DivisorCoords::deg2(alpha, GF4::one(), alpha, alpha_sq);
         let d2 = DivisorCoords::deg2(alpha, GF4::one(), GF4::zero(), alpha_sq);
@@ -269,9 +349,14 @@ mod arbitrary_tests {
     #[test]
     fn test_arb_add_17_deg2_same_u_diff_v() {
         let cc = CurveConstants {
-            f4: F7::new(1), f3: F7::new(6), f2: F7::zero(),
-            f1: F7::new(3), f0: F7::new(4),
-            h2: F7::new(1), h1: F7::new(6), h0: F7::new(6),
+            f4: F7::new(1),
+            f3: F7::new(6),
+            f2: F7::zero(),
+            f1: F7::new(3),
+            f0: F7::new(4),
+            h2: F7::new(1),
+            h1: F7::new(6),
+            h0: F7::new(6),
         };
         let d1 = DivisorCoords::deg2(F7::new(4), F7::new(3), F7::new(4), F7::new(5));
         let d2 = DivisorCoords::deg2(F7::new(4), F7::new(3), F7::new(6), F7::zero());
@@ -283,9 +368,14 @@ mod arbitrary_tests {
     #[test]
     fn test_arb_add_18_deg2_partial_common() {
         let cc = CurveConstants {
-            f4: F5::new(4), f3: F5::new(4), f2: F5::new(1),
-            f1: F5::zero(), f0: F5::new(1),
-            h2: F5::zero(), h1: F5::new(4), h0: F5::new(4),
+            f4: F5::new(4),
+            f3: F5::new(4),
+            f2: F5::new(1),
+            f1: F5::zero(),
+            f0: F5::new(1),
+            h2: F5::zero(),
+            h1: F5::new(4),
+            h0: F5::new(4),
         };
         let d1 = DivisorCoords::deg2(F5::new(1), F5::zero(), F5::new(4), F5::new(3));
         let d2 = DivisorCoords::deg2(F5::new(2), F5::zero(), F5::new(2), F5::new(3));
@@ -297,9 +387,14 @@ mod arbitrary_tests {
     #[test]
     fn test_arb_add_19_deg1_same_u() {
         let cc = CurveConstants {
-            f4: F3::zero(), f3: F3::new(2), f2: F3::new(2),
-            f1: F3::new(2), f0: F3::new(1),
-            h2: F3::new(1), h1: F3::new(1), h0: F3::zero(),
+            f4: F3::zero(),
+            f3: F3::new(2),
+            f2: F3::new(2),
+            f1: F3::new(2),
+            f0: F3::new(1),
+            h2: F3::new(1),
+            h1: F3::new(1),
+            h0: F3::zero(),
         };
         let d1 = DivisorCoords::deg1(F3::new(2), F3::zero());
         let d2 = DivisorCoords::deg1(F3::new(2), F3::new(1));
@@ -311,9 +406,14 @@ mod arbitrary_tests {
     #[test]
     fn test_arb_add_20_deg1_deg1() {
         let cc = CurveConstants {
-            f4: F5::new(4), f3: F5::new(4), f2: F5::new(3),
-            f1: F5::new(4), f0: F5::new(2),
-            h2: F5::zero(), h1: F5::new(4), h0: F5::new(1),
+            f4: F5::new(4),
+            f3: F5::new(4),
+            f2: F5::new(3),
+            f1: F5::new(4),
+            f0: F5::new(2),
+            h2: F5::zero(),
+            h1: F5::new(4),
+            h0: F5::new(1),
         };
         let d1 = DivisorCoords::deg1(F5::new(1), F5::zero());
         let d2 = DivisorCoords::deg1(F5::zero(), F5::new(3));
@@ -325,9 +425,14 @@ mod arbitrary_tests {
     #[test]
     fn test_arb_add_21_deg2_deg1() {
         let cc = CurveConstants {
-            f4: F5::new(4), f3: F5::new(1), f2: F5::new(3),
-            f1: F5::new(2), f0: F5::new(3),
-            h2: F5::zero(), h1: F5::zero(), h0: F5::new(1),
+            f4: F5::new(4),
+            f3: F5::new(1),
+            f2: F5::new(3),
+            f1: F5::new(2),
+            f0: F5::new(3),
+            h2: F5::zero(),
+            h1: F5::zero(),
+            h0: F5::new(1),
         };
         let d1 = DivisorCoords::deg2(F5::new(3), F5::new(2), F5::new(2), F5::new(4));
         let d2 = DivisorCoords::deg1(F5::new(2), F5::new(4));
@@ -341,9 +446,14 @@ mod arbitrary_tests {
         let alpha = GF4::gen();
         let alpha_sq = alpha * alpha;
         let cc = CurveConstants {
-            f4: alpha_sq, f3: GF4::one(), f2: alpha,
-            f1: GF4::zero(), f0: GF4::zero(),
-            h2: GF4::one(), h1: GF4::one(), h0: alpha,
+            f4: alpha_sq,
+            f3: GF4::one(),
+            f2: alpha,
+            f1: GF4::zero(),
+            f0: GF4::zero(),
+            h2: GF4::one(),
+            h1: GF4::one(),
+            h0: alpha,
         };
         let d1 = DivisorCoords::deg2(GF4::one(), GF4::one(), GF4::zero(), alpha);
         let d2 = DivisorCoords::deg1(alpha_sq, alpha);
@@ -375,8 +485,12 @@ mod char2_tests {
         let alpha = GF4::gen();
         let alpha_sq = alpha * alpha;
         let cc = CurveConstants {
-            f2: alpha, f1: alpha_sq, f0: GF4::zero(),
-            h2: GF4::one(), h1: alpha, h0: alpha,
+            f2: alpha,
+            f1: alpha_sq,
+            f0: GF4::zero(),
+            h2: GF4::one(),
+            h1: alpha,
+            h0: alpha,
         };
         let d = DivisorCoords::<GF4>::identity();
         let result = double(&d, &cc);
@@ -388,8 +502,12 @@ mod char2_tests {
     fn test_ch2_dbl_02_deg2() {
         let alpha = GF8::gen();
         let cc = CurveConstants {
-            f2: alpha, f1: alpha.pow(2), f0: alpha,
-            h2: GF8::one(), h1: alpha.pow(6), h0: alpha,
+            f2: alpha,
+            f1: alpha.pow(2),
+            f0: alpha,
+            h2: GF8::one(),
+            h1: alpha.pow(6),
+            h0: alpha,
         };
         let d = DivisorCoords::deg2(alpha.pow(5), alpha.pow(3), alpha.pow(4), alpha);
         let result = double(&d, &cc);
@@ -402,8 +520,12 @@ mod char2_tests {
         let alpha = GF4::gen();
         let alpha_sq = alpha * alpha;
         let cc = CurveConstants {
-            f2: alpha, f1: alpha_sq, f0: GF4::zero(),
-            h2: GF4::one(), h1: alpha, h0: alpha,
+            f2: alpha,
+            f1: alpha_sq,
+            f0: GF4::zero(),
+            h2: GF4::one(),
+            h1: alpha,
+            h0: alpha,
         };
         let d = DivisorCoords::deg2(alpha, GF4::one(), alpha, alpha_sq);
         let result = double(&d, &cc);
@@ -416,8 +538,12 @@ mod char2_tests {
         let alpha = GF4::gen();
         let alpha_sq = alpha * alpha;
         let cc = CurveConstants {
-            f2: alpha_sq, f1: GF4::zero(), f0: GF4::one(),
-            h2: GF4::one(), h1: alpha, h0: alpha_sq,
+            f2: alpha_sq,
+            f1: GF4::zero(),
+            f0: GF4::one(),
+            h2: GF4::one(),
+            h1: alpha,
+            h0: alpha_sq,
         };
         let d = DivisorCoords::deg2(alpha, alpha_sq, alpha_sq, GF4::one());
         let result = double(&d, &cc);
@@ -430,8 +556,12 @@ mod char2_tests {
         let alpha = GF4::gen();
         let alpha_sq = alpha * alpha;
         let cc = CurveConstants {
-            f2: GF4::one(), f1: alpha_sq, f0: GF4::one(),
-            h2: GF4::one(), h1: GF4::one(), h0: GF4::zero(),
+            f2: GF4::one(),
+            f1: alpha_sq,
+            f0: GF4::one(),
+            h2: GF4::one(),
+            h1: GF4::one(),
+            h0: GF4::zero(),
         };
         let d = DivisorCoords::deg2(alpha, GF4::zero(), GF4::zero(), GF4::one());
         let result = double(&d, &cc);
@@ -444,8 +574,12 @@ mod char2_tests {
         let alpha = GF4::gen();
         let alpha_sq = alpha * alpha;
         let cc = CurveConstants {
-            f2: GF4::zero(), f1: alpha_sq, f0: alpha_sq,
-            h2: GF4::zero(), h1: GF4::one(), h0: GF4::one(),
+            f2: GF4::zero(),
+            f1: alpha_sq,
+            f0: alpha_sq,
+            h2: GF4::zero(),
+            h1: GF4::one(),
+            h0: GF4::one(),
         };
         let d = DivisorCoords::deg1(GF4::one(), GF4::one());
         let result = double(&d, &cc);
@@ -457,8 +591,12 @@ mod char2_tests {
     fn test_ch2_dbl_07_deg1() {
         let alpha = GF8::gen();
         let cc = CurveConstants {
-            f2: alpha.pow(2), f1: GF8::one(), f0: alpha.pow(3),
-            h2: GF8::one(), h1: alpha.pow(5), h0: alpha.pow(6),
+            f2: alpha.pow(2),
+            f1: GF8::one(),
+            f0: alpha.pow(3),
+            h2: GF8::one(),
+            h1: alpha.pow(5),
+            h0: alpha.pow(6),
         };
         let d = DivisorCoords::deg1(alpha.pow(4), alpha.pow(6));
         let result = double(&d, &cc);
@@ -474,8 +612,12 @@ mod char2_tests {
     fn test_ch2_add_08_deg1_identity() {
         let alpha = GF8::gen();
         let cc = CurveConstants {
-            f2: alpha, f1: alpha.pow(2), f0: alpha,
-            h2: GF8::one(), h1: alpha.pow(6), h0: alpha,
+            f2: alpha,
+            f1: alpha.pow(2),
+            f0: alpha,
+            h2: GF8::one(),
+            h1: alpha.pow(6),
+            h0: alpha,
         };
         let d1 = DivisorCoords::deg1(alpha.pow(2), alpha.pow(4));
         let d2 = DivisorCoords::identity();
@@ -488,8 +630,12 @@ mod char2_tests {
     fn test_ch2_add_09_deg2_identity() {
         let alpha = GF8::gen();
         let cc = CurveConstants {
-            f2: alpha.pow(3), f1: alpha.pow(2), f0: alpha.pow(3),
-            h2: GF8::one(), h1: alpha.pow(4), h0: alpha.pow(4),
+            f2: alpha.pow(3),
+            f1: alpha.pow(2),
+            f0: alpha.pow(3),
+            h2: GF8::one(),
+            h1: alpha.pow(4),
+            h0: alpha.pow(4),
         };
         let d1 = DivisorCoords::deg2(alpha, GF8::zero(), alpha.pow(4), alpha);
         let d2 = DivisorCoords::identity();
@@ -502,8 +648,12 @@ mod char2_tests {
     fn test_ch2_add_10_deg2_deg2() {
         let alpha = GF8::gen();
         let cc = CurveConstants {
-            f2: alpha.pow(2), f1: GF8::one(), f0: alpha.pow(3),
-            h2: GF8::one(), h1: alpha.pow(5), h0: alpha.pow(6),
+            f2: alpha.pow(2),
+            f1: GF8::one(),
+            f0: alpha.pow(3),
+            h2: GF8::one(),
+            h1: alpha.pow(5),
+            h0: alpha.pow(6),
         };
         let d1 = DivisorCoords::deg2(alpha.pow(3), alpha.pow(5), GF8::zero(), GF8::one());
         let d2 = DivisorCoords::deg2(alpha.pow(6), GF8::one(), alpha.pow(6), alpha.pow(4));
@@ -516,8 +666,12 @@ mod char2_tests {
     fn test_ch2_add_11_deg2_deg2() {
         let alpha = GF8::gen();
         let cc = CurveConstants {
-            f2: alpha.pow(4), f1: alpha, f0: alpha.pow(2),
-            h2: GF8::one(), h1: alpha, h0: alpha.pow(4),
+            f2: alpha.pow(4),
+            f1: alpha,
+            f0: alpha.pow(2),
+            h2: GF8::one(),
+            h1: alpha,
+            h0: alpha.pow(4),
         };
         let d1 = DivisorCoords::deg2(alpha.pow(5), alpha.pow(2), alpha.pow(5), alpha);
         let d2 = DivisorCoords::deg2(GF8::zero(), GF8::zero(), alpha.pow(6), alpha.pow(6));
@@ -530,8 +684,12 @@ mod char2_tests {
     fn test_ch2_add_12_identity_deg2() {
         let alpha = GF8::gen();
         let cc = CurveConstants {
-            f2: alpha.pow(4), f1: alpha, f0: alpha.pow(2),
-            h2: GF8::one(), h1: alpha, h0: alpha.pow(4),
+            f2: alpha.pow(4),
+            f1: alpha,
+            f0: alpha.pow(2),
+            h2: GF8::one(),
+            h1: alpha,
+            h0: alpha.pow(4),
         };
         let d1 = DivisorCoords::identity();
         let d2 = DivisorCoords::deg2(alpha.pow(4), GF8::zero(), alpha.pow(3), alpha.pow(6));
@@ -545,8 +703,12 @@ mod char2_tests {
         let alpha = GF4::gen();
         let alpha_sq = alpha * alpha;
         let cc = CurveConstants {
-            f2: GF4::one(), f1: GF4::one(), f0: GF4::zero(),
-            h2: GF4::zero(), h1: GF4::zero(), h0: alpha,
+            f2: GF4::one(),
+            f1: GF4::one(),
+            f0: GF4::zero(),
+            h2: GF4::zero(),
+            h1: GF4::zero(),
+            h0: alpha,
         };
         let d1 = DivisorCoords::deg2(alpha_sq, GF4::zero(), alpha, alpha);
         let d2 = DivisorCoords::deg2(GF4::zero(), GF4::zero(), alpha_sq, alpha);
@@ -560,8 +722,12 @@ mod char2_tests {
         let alpha = GF4::gen();
         let alpha_sq = alpha * alpha;
         let cc = CurveConstants {
-            f2: GF4::one(), f1: alpha_sq, f0: GF4::one(),
-            h2: GF4::one(), h1: GF4::one(), h0: GF4::zero(),
+            f2: GF4::one(),
+            f1: alpha_sq,
+            f0: GF4::one(),
+            h2: GF4::one(),
+            h1: GF4::one(),
+            h0: GF4::zero(),
         };
         let d1 = DivisorCoords::deg2(alpha_sq, alpha, GF4::one(), alpha);
         let d2 = DivisorCoords::deg2(GF4::zero(), alpha_sq, GF4::one(), alpha);
@@ -574,8 +740,12 @@ mod char2_tests {
     fn test_ch2_add_15_deg1_deg2() {
         let alpha = GF8::gen();
         let cc = CurveConstants {
-            f2: alpha.pow(2), f1: GF8::one(), f0: alpha.pow(3),
-            h2: GF8::one(), h1: alpha.pow(5), h0: alpha.pow(6),
+            f2: alpha.pow(2),
+            f1: GF8::one(),
+            f0: alpha.pow(3),
+            h2: GF8::one(),
+            h1: alpha.pow(5),
+            h0: alpha.pow(6),
         };
         let d1 = DivisorCoords::deg1(alpha.pow(4), alpha.pow(6));
         let d2 = DivisorCoords::deg2(alpha.pow(2), alpha.pow(3), GF8::zero(), alpha.pow(4));
@@ -589,8 +759,12 @@ mod char2_tests {
         let alpha = GF4::gen();
         let alpha_sq = alpha * alpha;
         let cc = CurveConstants {
-            f2: GF4::zero(), f1: GF4::one(), f0: GF4::zero(),
-            h2: GF4::zero(), h1: alpha, h0: alpha_sq,
+            f2: GF4::zero(),
+            f1: GF4::one(),
+            f0: GF4::zero(),
+            h2: GF4::zero(),
+            h1: alpha,
+            h0: alpha_sq,
         };
         let d1 = DivisorCoords::deg2(alpha, GF4::zero(), GF4::one(), alpha_sq);
         let d2 = DivisorCoords::deg2(alpha, GF4::zero(), alpha_sq, GF4::zero());
@@ -603,8 +777,12 @@ mod char2_tests {
     fn test_ch2_add_17_deg2_same_u() {
         let alpha = GF8::gen();
         let cc = CurveConstants {
-            f2: alpha.pow(5), f1: alpha, f0: alpha.pow(3),
-            h2: GF8::one(), h1: alpha.pow(4), h0: alpha.pow(3),
+            f2: alpha.pow(5),
+            f1: alpha,
+            f0: alpha.pow(3),
+            h2: GF8::one(),
+            h1: alpha.pow(4),
+            h0: alpha.pow(3),
         };
         let d1 = DivisorCoords::deg2(alpha.pow(3), GF8::zero(), GF8::one(), alpha.pow(4));
         let d2 = DivisorCoords::deg2(alpha.pow(3), GF8::zero(), GF8::zero(), alpha.pow(6));
@@ -618,8 +796,12 @@ mod char2_tests {
         let alpha = GF4::gen();
         let alpha_sq = alpha * alpha;
         let cc = CurveConstants {
-            f2: GF4::zero(), f1: GF4::one(), f0: GF4::zero(),
-            h2: GF4::zero(), h1: alpha, h0: alpha_sq,
+            f2: GF4::zero(),
+            f1: GF4::one(),
+            f0: GF4::zero(),
+            h2: GF4::zero(),
+            h1: alpha,
+            h0: alpha_sq,
         };
         let d1 = DivisorCoords::deg2(alpha, GF4::zero(), GF4::one(), alpha_sq);
         let d2 = DivisorCoords::deg2(alpha_sq, alpha, GF4::zero(), GF4::one());
@@ -632,8 +814,12 @@ mod char2_tests {
     fn test_ch2_add_19_deg1_same_u() {
         let alpha = GF8::gen();
         let cc = CurveConstants {
-            f2: alpha.pow(5), f1: alpha, f0: alpha.pow(2),
-            h2: GF8::one(), h1: GF8::zero(), h0: alpha.pow(5),
+            f2: alpha.pow(5),
+            f1: alpha,
+            f0: alpha.pow(2),
+            h2: GF8::one(),
+            h1: GF8::zero(),
+            h0: alpha.pow(5),
         };
         let d1 = DivisorCoords::deg1(alpha.pow(3), alpha.pow(5));
         let d2 = DivisorCoords::deg1(alpha.pow(3), alpha.pow(6));
@@ -648,8 +834,12 @@ mod char2_tests {
         let alpha = GF4::gen();
         let alpha_sq = alpha * alpha;
         let cc = CurveConstants {
-            f2: GF4::zero(), f1: alpha, f0: alpha,
-            h2: GF4::zero(), h1: GF4::one(), h0: GF4::zero(),
+            f2: GF4::zero(),
+            f1: alpha,
+            f0: alpha,
+            h2: GF4::zero(),
+            h1: GF4::one(),
+            h0: GF4::zero(),
         };
         let d1 = DivisorCoords::deg1(GF4::one(), alpha);
         let d2 = DivisorCoords::deg1(GF4::zero(), alpha_sq);
@@ -663,8 +853,12 @@ mod char2_tests {
         let alpha = GF4::gen();
         let alpha_sq = alpha * alpha;
         let cc = CurveConstants {
-            f2: GF4::one(), f1: GF4::one(), f0: alpha_sq,
-            h2: GF4::one(), h1: GF4::zero(), h0: GF4::zero(),
+            f2: GF4::one(),
+            f1: GF4::one(),
+            f0: alpha_sq,
+            h2: GF4::one(),
+            h1: GF4::zero(),
+            h0: GF4::zero(),
         };
         let d1 = DivisorCoords::deg1(alpha_sq, GF4::zero());
         let d2 = DivisorCoords::deg2(alpha_sq, GF4::zero(), GF4::zero(), alpha);
@@ -677,8 +871,12 @@ mod char2_tests {
     fn test_ch2_add_22_deg2_deg1() {
         let alpha = GF8::gen();
         let cc = CurveConstants {
-            f2: alpha.pow(2), f1: alpha.pow(4), f0: alpha.pow(6),
-            h2: GF8::zero(), h1: alpha.pow(6), h0: alpha.pow(6),
+            f2: alpha.pow(2),
+            f1: alpha.pow(4),
+            f0: alpha.pow(6),
+            h2: GF8::zero(),
+            h1: alpha.pow(6),
+            h0: alpha.pow(6),
         };
         let d1 = DivisorCoords::deg2(alpha.pow(6), alpha.pow(2), alpha.pow(2), GF8::zero());
         let d2 = DivisorCoords::deg1(alpha.pow(2), alpha.pow(4));
@@ -709,7 +907,10 @@ mod not_char2_tests {
     #[test]
     fn test_nch2_dbl_01_identity() {
         let cc = CurveConstants {
-            f3: F3::new(1), f2: F3::new(2), f1: F3::new(2), f0: F3::zero(),
+            f3: F3::new(1),
+            f2: F3::new(2),
+            f1: F3::new(2),
+            f0: F3::zero(),
         };
         let d = DivisorCoords::<F3>::identity();
         let result = double(&d, &cc);
@@ -720,7 +921,10 @@ mod not_char2_tests {
     #[test]
     fn test_nch2_dbl_02_deg2() {
         let cc = CurveConstants {
-            f3: F5::new(2), f2: F5::new(1), f1: F5::new(3), f0: F5::new(3),
+            f3: F5::new(2),
+            f2: F5::new(1),
+            f1: F5::new(3),
+            f0: F5::new(3),
         };
         let d = DivisorCoords::deg2(F5::new(3), F5::new(4), F5::new(2), F5::new(4));
         let result = double(&d, &cc);
@@ -731,7 +935,10 @@ mod not_char2_tests {
     #[test]
     fn test_nch2_dbl_03_deg2() {
         let cc = CurveConstants {
-            f3: F7::new(2), f2: F7::new(1), f1: F7::new(4), f0: F7::new(6),
+            f3: F7::new(2),
+            f2: F7::new(1),
+            f1: F7::new(4),
+            f0: F7::new(6),
         };
         let d = DivisorCoords::deg2(F7::new(5), F7::new(5), F7::new(1), F7::new(2));
         let result = double(&d, &cc);
@@ -742,7 +949,10 @@ mod not_char2_tests {
     #[test]
     fn test_nch2_dbl_04_d_zero() {
         let cc = CurveConstants {
-            f3: F3::new(1), f2: F3::new(2), f1: F3::new(2), f0: F3::zero(),
+            f3: F3::new(1),
+            f2: F3::new(2),
+            f1: F3::new(2),
+            f0: F3::zero(),
         };
         let d = DivisorCoords::deg2(F3::new(2), F3::zero(), F3::zero(), F3::zero());
         let result = double(&d, &cc);
@@ -753,7 +963,10 @@ mod not_char2_tests {
     #[test]
     fn test_nch2_dbl_05_sp1_zero() {
         let cc = CurveConstants {
-            f3: F7::zero(), f2: F7::new(4), f1: F7::new(4), f0: F7::zero(),
+            f3: F7::zero(),
+            f2: F7::new(4),
+            f1: F7::new(4),
+            f0: F7::zero(),
         };
         let d = DivisorCoords::deg2(F7::new(2), F7::zero(), F7::new(6), F7::zero());
         let result = double(&d, &cc);
@@ -764,7 +977,10 @@ mod not_char2_tests {
     #[test]
     fn test_nch2_dbl_06_deg1_d_zero() {
         let cc = CurveConstants {
-            f3: F7::new(2), f2: F7::new(1), f1: F7::new(4), f0: F7::new(6),
+            f3: F7::new(2),
+            f2: F7::new(1),
+            f1: F7::new(4),
+            f0: F7::new(6),
         };
         let d = DivisorCoords::deg1(F7::new(3), F7::zero());
         let result = double(&d, &cc);
@@ -775,7 +991,10 @@ mod not_char2_tests {
     #[test]
     fn test_nch2_dbl_07_deg1() {
         let cc = CurveConstants {
-            f3: F3::new(1), f2: F3::new(1), f1: F3::new(1), f0: F3::zero(),
+            f3: F3::new(1),
+            f2: F3::new(1),
+            f1: F3::new(1),
+            f0: F3::zero(),
         };
         let d = DivisorCoords::deg1(F3::new(2), F3::new(2));
         let result = double(&d, &cc);
@@ -790,7 +1009,10 @@ mod not_char2_tests {
     #[test]
     fn test_nch2_add_08_deg1_identity() {
         let cc = CurveConstants {
-            f3: F3::zero(), f2: F3::new(1), f1: F3::new(2), f0: F3::new(1),
+            f3: F3::zero(),
+            f2: F3::new(1),
+            f1: F3::new(2),
+            f0: F3::new(1),
         };
         let d1 = DivisorCoords::deg1(F3::new(2), F3::new(2));
         let d2 = DivisorCoords::identity();
@@ -802,7 +1024,10 @@ mod not_char2_tests {
     #[test]
     fn test_nch2_add_09_deg2_identity() {
         let cc = CurveConstants {
-            f3: F3::new(1), f2: F3::new(2), f1: F3::new(2), f0: F3::zero(),
+            f3: F3::new(1),
+            f2: F3::new(2),
+            f1: F3::new(2),
+            f0: F3::zero(),
         };
         let d1 = DivisorCoords::deg2(F3::new(2), F3::zero(), F3::zero(), F3::zero());
         let d2 = DivisorCoords::identity();
@@ -814,7 +1039,10 @@ mod not_char2_tests {
     #[test]
     fn test_nch2_add_10_deg2_deg2() {
         let cc = CurveConstants {
-            f3: F5::new(1), f2: F5::new(4), f1: F5::zero(), f0: F5::new(1),
+            f3: F5::new(1),
+            f2: F5::new(4),
+            f1: F5::zero(),
+            f0: F5::new(1),
         };
         let d1 = DivisorCoords::deg2(F5::zero(), F5::zero(), F5::zero(), F5::new(4));
         let d2 = DivisorCoords::deg2(F5::zero(), F5::new(3), F5::new(2), F5::new(4));
@@ -826,7 +1054,10 @@ mod not_char2_tests {
     #[test]
     fn test_nch2_add_11_deg2_deg2() {
         let cc = CurveConstants {
-            f3: F3::zero(), f2: F3::zero(), f1: F3::new(1), f0: F3::zero(),
+            f3: F3::zero(),
+            f2: F3::zero(),
+            f1: F3::new(1),
+            f0: F3::zero(),
         };
         let d1 = DivisorCoords::deg2(F3::new(2), F3::new(2), F3::zero(), F3::zero());
         let d2 = DivisorCoords::deg2(F3::new(2), F3::new(1), F3::zero(), F3::new(1));
@@ -838,7 +1069,10 @@ mod not_char2_tests {
     #[test]
     fn test_nch2_add_12_identity_deg2() {
         let cc = CurveConstants {
-            f3: F5::new(2), f2: F5::new(1), f1: F5::new(3), f0: F5::new(3),
+            f3: F5::new(2),
+            f2: F5::new(1),
+            f1: F5::new(3),
+            f0: F5::new(3),
         };
         let d1 = DivisorCoords::identity();
         let d2 = DivisorCoords::deg2(F5::new(2), F5::new(4), F5::new(2), F5::new(2));
@@ -850,7 +1084,10 @@ mod not_char2_tests {
     #[test]
     fn test_nch2_add_13_deg2_deg2() {
         let cc = CurveConstants {
-            f3: F3::new(2), f2: F3::zero(), f1: F3::zero(), f0: F3::new(1),
+            f3: F3::new(2),
+            f2: F3::zero(),
+            f1: F3::zero(),
+            f0: F3::new(1),
         };
         let d1 = DivisorCoords::deg2(F3::new(2), F3::new(1), F3::new(1), F3::new(2));
         let d2 = DivisorCoords::deg2(F3::new(1), F3::zero(), F3::zero(), F3::new(1));
@@ -862,7 +1099,10 @@ mod not_char2_tests {
     #[test]
     fn test_nch2_add_14_deg2_deg2() {
         let cc = CurveConstants {
-            f3: F7::zero(), f2: F7::new(4), f1: F7::new(4), f0: F7::zero(),
+            f3: F7::zero(),
+            f2: F7::new(4),
+            f1: F7::new(4),
+            f0: F7::zero(),
         };
         let d1 = DivisorCoords::deg2(F7::new(2), F7::zero(), F7::new(6), F7::zero());
         let d2 = DivisorCoords::deg2(F7::zero(), F7::new(3), F7::new(3), F7::new(1));
@@ -874,7 +1114,10 @@ mod not_char2_tests {
     #[test]
     fn test_nch2_add_15_deg2_deg1() {
         let cc = CurveConstants {
-            f3: F7::new(2), f2: F7::new(1), f1: F7::new(4), f0: F7::new(6),
+            f3: F7::new(2),
+            f2: F7::new(1),
+            f1: F7::new(4),
+            f0: F7::new(6),
         };
         let d1 = DivisorCoords::deg2(F7::new(5), F7::new(5), F7::new(1), F7::new(2));
         let d2 = DivisorCoords::deg1(F7::new(1), F7::zero());
@@ -886,7 +1129,10 @@ mod not_char2_tests {
     #[test]
     fn test_nch2_add_16_deg2_same_u() {
         let cc = CurveConstants {
-            f3: F3::new(1), f2: F3::new(1), f1: F3::new(1), f0: F3::zero(),
+            f3: F3::new(1),
+            f2: F3::new(1),
+            f1: F3::new(1),
+            f0: F3::zero(),
         };
         let d1 = DivisorCoords::deg2(F3::new(2), F3::new(2), F3::new(1), F3::new(1));
         let d2 = DivisorCoords::deg2(F3::new(2), F3::new(2), F3::new(2), F3::new(2));
@@ -898,7 +1144,10 @@ mod not_char2_tests {
     #[test]
     fn test_nch2_add_17_deg2_same_u() {
         let cc = CurveConstants {
-            f3: F7::new(3), f2: F7::new(1), f1: F7::new(2), f0: F7::zero(),
+            f3: F7::new(3),
+            f2: F7::new(1),
+            f1: F7::new(2),
+            f0: F7::zero(),
         };
         let d1 = DivisorCoords::deg2(F7::new(6), F7::new(5), F7::new(6), F7::new(3));
         let d2 = DivisorCoords::deg2(F7::new(6), F7::new(5), F7::new(4), F7::zero());
@@ -910,7 +1159,10 @@ mod not_char2_tests {
     #[test]
     fn test_nch2_add_18_deg2_deg2() {
         let cc = CurveConstants {
-            f3: F5::new(2), f2: F5::new(4), f1: F5::new(1), f0: F5::zero(),
+            f3: F5::new(2),
+            f2: F5::new(4),
+            f1: F5::new(1),
+            f0: F5::zero(),
         };
         let d1 = DivisorCoords::deg2(F5::new(2), F5::zero(), F5::new(3), F5::zero());
         let d2 = DivisorCoords::deg2(F5::new(4), F5::new(4), F5::new(2), F5::zero());
@@ -922,7 +1174,10 @@ mod not_char2_tests {
     #[test]
     fn test_nch2_add_19_deg1_same_u() {
         let cc = CurveConstants {
-            f3: F3::zero(), f2: F3::new(1), f1: F3::new(2), f0: F3::new(1),
+            f3: F3::zero(),
+            f2: F3::new(1),
+            f1: F3::new(2),
+            f0: F3::new(1),
         };
         let d1 = DivisorCoords::deg1(F3::zero(), F3::new(1));
         let d2 = DivisorCoords::deg1(F3::zero(), F3::new(2));
@@ -934,7 +1189,10 @@ mod not_char2_tests {
     #[test]
     fn test_nch2_add_20_deg1_deg1() {
         let cc = CurveConstants {
-            f3: F3::zero(), f2: F3::zero(), f1: F3::new(1), f0: F3::zero(),
+            f3: F3::zero(),
+            f2: F3::zero(),
+            f1: F3::new(1),
+            f0: F3::zero(),
         };
         let d1 = DivisorCoords::deg1(F3::zero(), F3::zero());
         let d2 = DivisorCoords::deg1(F3::new(1), F3::new(2));
@@ -946,7 +1204,10 @@ mod not_char2_tests {
     #[test]
     fn test_nch2_add_21_deg2_deg1() {
         let cc = CurveConstants {
-            f3: F7::zero(), f2: F7::new(4), f1: F7::new(4), f0: F7::zero(),
+            f3: F7::zero(),
+            f2: F7::new(4),
+            f1: F7::new(4),
+            f0: F7::zero(),
         };
         let d1 = DivisorCoords::deg2(F7::new(6), F7::zero(), F7::new(4), F7::zero());
         let d2 = DivisorCoords::deg1(F7::zero(), F7::zero());
@@ -958,7 +1219,10 @@ mod not_char2_tests {
     #[test]
     fn test_nch2_add_22_deg1_deg2() {
         let cc = CurveConstants {
-            f3: F5::new(4), f2: F5::new(3), f1: F5::new(3), f0: F5::new(1),
+            f3: F5::new(4),
+            f2: F5::new(3),
+            f1: F5::new(3),
+            f0: F5::new(1),
         };
         let d1 = DivisorCoords::deg1(F5::zero(), F5::new(4));
         let d2 = DivisorCoords::deg2(F5::zero(), F5::zero(), F5::new(1), F5::new(4));
@@ -966,4 +1230,3 @@ mod not_char2_tests {
         assert!(result.degree() <= 2);
     }
 }
-

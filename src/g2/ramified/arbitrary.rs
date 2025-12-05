@@ -19,7 +19,7 @@
 use crate::field::Field;
 
 /// Curve constants for a ramified genus 2 curve.
-/// 
+///
 /// Represents `y² + h(x)y = f(x)` where:
 /// - `f(x) = x⁵ + f4*x⁴ + f3*x³ + f2*x² + f1*x + f0`
 /// - `h(x) = h2*x² + h1*x + h0`
@@ -36,7 +36,7 @@ pub struct CurveConstants<F: Field> {
 }
 
 /// Result of divisor operations.
-/// 
+///
 /// Represents a divisor `(u(x), v(x))` where:
 /// - If `u2 == 1`: degree 2 divisor with `u = x² + u1*x + u0`, `v = v1*x + v0`
 /// - If `u2 == 0` and `u1 == 1`: degree 1 divisor with `u = x + u0`, `v = v0`
@@ -102,14 +102,14 @@ impl<F: Field> DivisorCoords<F> {
 }
 
 /// Add two degree 1 divisors.
-/// 
+///
 /// Input: `D1 = (x + u0, v0)`, `D2 = (x + up0, vp0)`
 /// Output: `D3 = D1 + D2`
 #[inline]
 pub fn deg1_add<F: Field>(u0: F, v0: F, up0: F, vp0: F) -> DivisorCoords<F> {
     // d := u mod up = u0 - up0
     let d = u0 - up0;
-    
+
     if d.is_zero() {
         // Same roots - result is identity
         return DivisorCoords::identity();
@@ -144,7 +144,16 @@ pub fn deg12_add<F: Field>(
     vp0: F,
     cc: &CurveConstants<F>,
 ) -> DivisorCoords<F> {
-    let CurveConstants { f4, f3, f2, f1: _, f0: _, h2, h1, h0 } = *cc;
+    let CurveConstants {
+        f4,
+        f3,
+        f2,
+        f1: _,
+        f0: _,
+        h2,
+        h1,
+        h0,
+    } = *cc;
 
     // d := up mod u = up0 - u0*(up1 - u0)
     let d = up0 - u0 * (up1 - u0);
@@ -220,7 +229,16 @@ pub fn deg2_add<F: Field>(
     vp0: F,
     cc: &CurveConstants<F>,
 ) -> DivisorCoords<F> {
-    let CurveConstants { f4, f3, f2, f1: _, f0: _, h2, h1, h0 } = *cc;
+    let CurveConstants {
+        f4,
+        f3,
+        f2,
+        f1: _,
+        f0: _,
+        h2,
+        h1,
+        h0,
+    } = *cc;
 
     // d := Resultant(u, up) computed with 2x2 system
     let m3 = up1 - u1;
@@ -332,7 +350,16 @@ fn deg2_add_common<F: Field>(
     d: F,
     cc: &CurveConstants<F>,
 ) -> DivisorCoords<F> {
-    let CurveConstants { f4, f3: _, f2: _, f1: _, f0: _, h2, h1, h0 } = *cc;
+    let CurveConstants {
+        f4,
+        f3: _,
+        f2: _,
+        f1: _,
+        f0: _,
+        h2,
+        h1,
+        h0,
+    } = *cc;
 
     if sp1.is_zero() {
         let t0 = d.inv();
@@ -372,7 +399,16 @@ fn deg2_add_common<F: Field>(
 /// Output: `2D`
 #[inline]
 pub fn deg1_dbl<F: Field>(u0: F, v0: F, cc: &CurveConstants<F>) -> DivisorCoords<F> {
-    let CurveConstants { f4, f3, f2, f1, f0: _, h2, h1, h0 } = *cc;
+    let CurveConstants {
+        f4,
+        f3,
+        f2,
+        f1,
+        f0: _,
+        h2,
+        h1,
+        h0,
+    } = *cc;
 
     // d := (2v + h) mod u
     let upp0 = u0.square();
@@ -401,7 +437,16 @@ pub fn deg1_dbl<F: Field>(u0: F, v0: F, cc: &CurveConstants<F>) -> DivisorCoords
 /// Output: `2D`
 #[inline]
 pub fn deg2_dbl<F: Field>(u1: F, u0: F, v1: F, v0: F, cc: &CurveConstants<F>) -> DivisorCoords<F> {
-    let CurveConstants { f4, f3, f2, f1: _, f0: _, h2, h1, h0 } = *cc;
+    let CurveConstants {
+        f4,
+        f3,
+        f2,
+        f1: _,
+        f0: _,
+        h2,
+        h1,
+        h0,
+    } = *cc;
 
     // d := Resultant(u, 2v + h) computed with 2x2 system
     let vh1 = v1 + h1;
@@ -483,7 +528,11 @@ pub fn deg2_dbl<F: Field>(u1: F, u0: F, v1: F, v0: F, cc: &CurveConstants<F>) ->
 
 /// Add two divisors of arbitrary degree.
 #[inline]
-pub fn add<F: Field>(d1: &DivisorCoords<F>, d2: &DivisorCoords<F>, cc: &CurveConstants<F>) -> DivisorCoords<F> {
+pub fn add<F: Field>(
+    d1: &DivisorCoords<F>,
+    d2: &DivisorCoords<F>,
+    cc: &CurveConstants<F>,
+) -> DivisorCoords<F> {
     match (d1.degree(), d2.degree()) {
         (0, _) => *d2,
         (_, 0) => *d1,
@@ -586,4 +635,3 @@ mod tests {
         assert_eq!(double(&id, &cc), id);
     }
 }
-

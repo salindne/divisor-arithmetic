@@ -6,8 +6,8 @@
 
 use crate::field::{BinaryExtField, Field, PrimeField};
 use rand::rngs::StdRng;
-use rand::SeedableRng;
 use rand::Rng;
+use rand::SeedableRng;
 
 // =============================================================================
 // NCH2 Tests - y² = f(x) curves
@@ -22,7 +22,7 @@ mod not_char2_blackbox {
         if target.is_zero() {
             return Some(F::zero());
         }
-        
+
         // For small fields, try all elements
         // This works for fields up to ~65536 elements
         let mut rng = rand::thread_rng();
@@ -45,7 +45,7 @@ mod not_char2_blackbox {
             let a4 = a3 * a;
             let a5 = a4 * a;
             let fa = a5 + f[4] * a4 + f[3] * a3 + f[2] * a2 + f[1] * a + f[0];
-            
+
             if let Some(b) = sqrt(fa) {
                 return Some((a, b));
             }
@@ -113,32 +113,32 @@ mod not_char2_blackbox {
 
     fn run_test<F: Field>(seed: u64, curves: usize, divisors_per_curve: usize) {
         let mut rng = StdRng::seed_from_u64(seed);
-        
+
         for _ in 0..curves {
             let (f, cc): ([F; 6], CurveConstants<F>) = random_nch2_curve(&mut rng);
-            
+
             for _ in 0..divisors_per_curve {
                 let d1 = random_valid_divisor(&f, &cc, &mut rng);
                 let d2 = random_valid_divisor(&f, &cc, &mut rng);
-                
+
                 // Test identity
                 let id = DivisorCoords::identity();
                 assert_eq!(add(&d1, &id, &cc), d1, "D + 0 != D");
                 assert_eq!(add(&id, &d1, &cc), d1, "0 + D != D");
-                
+
                 // Test double of identity
                 assert!(double(&id, &cc).is_identity(), "2*0 != 0");
-                
+
                 // Test add with distinct divisors (like Magma tests)
                 if d1 != d2 {
                     let sum = add(&d1, &d2, &cc);
                     assert!(sum.degree() <= 2, "ADD result degree > 2");
-                    
+
                     // Test commutativity
                     let sum_rev = add(&d2, &d1, &cc);
                     assert_eq!(sum, sum_rev, "D1 + D2 != D2 + D1");
                 }
-                
+
                 // Test doubling
                 let dbl = double(&d1, &cc);
                 assert!(dbl.degree() <= 2, "DBL result degree > 2");
@@ -181,7 +181,7 @@ mod arbitrary_blackbox {
         if target.is_zero() && h_val.is_zero() {
             return Some(F::zero());
         }
-        
+
         // Try random values
         let mut rng = rand::thread_rng();
         for _ in 0..10000 {
@@ -194,24 +194,20 @@ mod arbitrary_blackbox {
     }
 
     /// Find a valid point (a, b) on curve y² + h(a)y = f(a)
-    fn find_curve_point<F: Field, R: Rng>(
-        f: &[F; 6],
-        h: &[F; 3],
-        rng: &mut R,
-    ) -> Option<(F, F)> {
+    fn find_curve_point<F: Field, R: Rng>(f: &[F; 6], h: &[F; 3], rng: &mut R) -> Option<(F, F)> {
         for _ in 0..100 {
             let a = F::random(rng);
-            
+
             // Evaluate f(a)
             let a2 = a * a;
             let a3 = a2 * a;
             let a4 = a3 * a;
             let a5 = a4 * a;
             let fa = a5 + f[4] * a4 + f[3] * a3 + f[2] * a2 + f[1] * a + f[0];
-            
+
             // Evaluate h(a)
             let ha = h[2] * a2 + h[1] * a + h[0];
-            
+
             // Solve b² + ha*b = fa
             if let Some(b) = solve_quadratic(ha, fa) {
                 return Some((a, b));
@@ -267,43 +263,53 @@ mod arbitrary_blackbox {
         let h = [
             F::random(rng), // h0
             F::random(rng), // h1
-            if rng.gen_bool(0.3) { F::one() } else { F::zero() }, // h2
+            if rng.gen_bool(0.3) {
+                F::one()
+            } else {
+                F::zero()
+            }, // h2
         ];
         let cc = CurveConstants {
-            f4: f[4], f3: f[3], f2: f[2], f1: f[1], f0: f[0],
-            h2: h[2], h1: h[1], h0: h[0],
+            f4: f[4],
+            f3: f[3],
+            f2: f[2],
+            f1: f[1],
+            f0: f[0],
+            h2: h[2],
+            h1: h[1],
+            h0: h[0],
         };
         (f, h, cc)
     }
 
     fn run_test<F: Field>(seed: u64, curves: usize, divisors_per_curve: usize) {
         let mut rng = StdRng::seed_from_u64(seed);
-        
+
         for _ in 0..curves {
             let (f, h, cc): ([F; 6], [F; 3], CurveConstants<F>) = random_arb_curve(&mut rng);
-            
+
             for _ in 0..divisors_per_curve {
                 let d1 = random_valid_divisor(&f, &h, &cc, &mut rng);
                 let d2 = random_valid_divisor(&f, &h, &cc, &mut rng);
-                
+
                 // Test identity
                 let id = DivisorCoords::identity();
                 assert_eq!(add(&d1, &id, &cc), d1, "D + 0 != D");
                 assert_eq!(add(&id, &d1, &cc), d1, "0 + D != D");
-                
+
                 // Test double of identity
                 assert!(double(&id, &cc).is_identity(), "2*0 != 0");
-                
+
                 // Test add with distinct divisors (like Magma tests)
                 if d1 != d2 {
                     let sum = add(&d1, &d2, &cc);
                     assert!(sum.degree() <= 2, "ADD result degree > 2");
-                    
+
                     // Test commutativity
                     let sum_rev = add(&d2, &d1, &cc);
                     assert_eq!(sum, sum_rev, "D1 + D2 != D2 + D1");
                 }
-                
+
                 // Test doubling
                 let dbl = double(&d1, &cc);
                 assert!(dbl.degree() <= 2, "DBL result degree > 2");
@@ -358,7 +364,7 @@ mod char2_blackbox {
             }
             return None;
         }
-        
+
         // h != 0: try random values
         let mut rng = rand::thread_rng();
         for _ in 0..10000 {
@@ -371,22 +377,18 @@ mod char2_blackbox {
         None
     }
 
-    fn find_curve_point<F: Field, R: Rng>(
-        f: &[F; 6],
-        h: &[F; 3],
-        rng: &mut R,
-    ) -> Option<(F, F)> {
+    fn find_curve_point<F: Field, R: Rng>(f: &[F; 6], h: &[F; 3], rng: &mut R) -> Option<(F, F)> {
         for _ in 0..100 {
             let a = F::random(rng);
-            
+
             // f(a) = a^5 + f2*a^2 + f1*a + f0 (f4=f3=0 for ch2)
             let a2 = a * a;
             let a5 = a2 * a2 * a;
             let fa = a5 + f[2] * a2 + f[1] * a + f[0];
-            
+
             // h(a)
             let ha = h[2] * a2 + h[1] * a + h[0];
-            
+
             if let Some(b) = solve_char2_quadratic(ha, fa) {
                 return Some((a, b));
             }
@@ -441,43 +443,51 @@ mod char2_blackbox {
         let h = [
             F::random(rng), // h0
             F::random(rng), // h1
-            if rng.gen_bool(0.5) { F::one() } else { F::zero() }, // h2
+            if rng.gen_bool(0.5) {
+                F::one()
+            } else {
+                F::zero()
+            }, // h2
         ];
         let cc = CurveConstants {
-            f2: f[2], f1: f[1], f0: f[0],
-            h2: h[2], h1: h[1], h0: h[0],
+            f2: f[2],
+            f1: f[1],
+            f0: f[0],
+            h2: h[2],
+            h1: h[1],
+            h0: h[0],
         };
         (f, h, cc)
     }
 
     fn run_test<F: Field>(seed: u64, curves: usize, divisors_per_curve: usize) {
         let mut rng = StdRng::seed_from_u64(seed);
-        
+
         for _ in 0..curves {
             let (f, h, cc): ([F; 6], [F; 3], CurveConstants<F>) = random_ch2_curve(&mut rng);
-            
+
             for _ in 0..divisors_per_curve {
                 let d1 = random_valid_divisor(&f, &h, &cc, &mut rng);
                 let d2 = random_valid_divisor(&f, &h, &cc, &mut rng);
-                
+
                 // Test identity
                 let id = DivisorCoords::identity();
                 assert_eq!(add(&d1, &id, &cc), d1, "D + 0 != D");
                 assert_eq!(add(&id, &d1, &cc), d1, "0 + D != D");
-                
+
                 // Test double of identity
                 assert!(double(&id, &cc).is_identity(), "2*0 != 0");
-                
+
                 // Test add with distinct divisors (like Magma tests)
                 if d1 != d2 {
                     let sum = add(&d1, &d2, &cc);
                     assert!(sum.degree() <= 2, "ADD result degree > 2");
-                    
+
                     // Test commutativity
                     let sum_rev = add(&d2, &d1, &cc);
                     assert_eq!(sum, sum_rev, "D1 + D2 != D2 + D1");
                 }
-                
+
                 // Test doubling
                 let dbl = double(&d1, &cc);
                 assert!(dbl.degree() <= 2, "DBL result degree > 2");
