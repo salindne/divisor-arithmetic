@@ -16,7 +16,7 @@
 //!   - `y² + h(x)y = f(x)` where `deg(f) = 6`, `deg(h) ≤ 3`
 
 pub mod ramified;
-// pub mod split;  // TODO: implement split model
+pub mod split;
 
 #[cfg(test)]
 mod tests; // Integration tests comparing specialized vs generic
