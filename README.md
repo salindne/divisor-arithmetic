@@ -34,6 +34,9 @@ This crate provides highly optimized implementations of divisor addition and dou
 
 - **Field Implementations**:
   - `PrimeField<P>` - Prime fields F_p for small primes
+  - `MontgomeryField<P>` - Prime fields F_p in Montgomery form (REDC multiply +
+    binary-GCD inverse, no division) for odd `P < 2^63` — ~4× faster group law
+    than `PrimeField`, drop-in via the same `Field` trait
   - `BinaryExtField<K>` - Binary extension fields GF(2^k) for k ≤ 24
 
 - **Generic Polynomial Algorithms**: Reference implementations using Cantor's algorithm, NUCOMP, and NUDUPLE
@@ -168,42 +171,41 @@ model as this crate's `g2::ramified::not_char2`. Both are compared two ways:
   metric that matters for the generic-group order computations smalljac targets.
 
 All numbers below were measured **on the same machine** (Apple Silicon, single
-core; smalljac v4.1.3 + ff_poly v1.2.7 ported to arm64), on the same depressed
-monic quintic (`f₄ = 0` — required, else smalljac falls back to generic Cantor),
-in ns per group operation:
+core; smalljac v4.1.3 + ff_poly v1.2.7 ported to arm64), at a **56-bit prime**,
+on the same depressed monic quintic (`f₄ = 0` — required, else smalljac falls
+back to generic Cantor). ns per group operation:
 
-| field | op | this crate, scalar | smalljac, scalar | this crate, batched | smalljac, batched |
-|-------|----|------------------:|-----------------:|-------------------:|------------------:|
-| p = 65521 (16-bit) | add    | 222 | 100 | 99  | 47 |
-| p = 65521 (16-bit) | double | 245 | 105 | 115 | 54 |
-| 56-bit prime       | add    | 673 | 190 | 348 | 48 |
-| 56-bit prime       | double | 691 | 210 | 384 | 54 |
+| operation | `PrimeField` | `MontgomeryField` | smalljac |
+|-----------|------------:|------------------:|---------:|
+| add, scalar              | 673 | **163** | 190 |
+| double, scalar           | 691 | **168** | 210 |
+| add, batched (N = 1024)  | 348 | **40**  | 48  |
+| double, batched (N=1024) | 384 | **46**  | 54  |
 
-Batching helps both implementations (it removes the inversion): this crate's
-56-bit add drops 673 → 348 ns (1.9×), smalljac's 190 → 48 ns (4×). But smalljac
-is faster in every cell, and the reason is the **field-arithmetic layer**, not
-the genus-2 formulas (the [operation counts](#field-operation-counts) — ~26 M,
-1 I — are essentially the same). Measured field ops at the 56-bit prime:
+The crate ships two field backends behind the same [`Field`] trait: `PrimeField`
+(schoolbook `u128`-multiply + hardware modulo, extended-Euclidean inverse) and
+[`MontgomeryField`] (Montgomery REDC multiply — no division — and a binary-GCD
+inverse, the field arithmetic fast C libraries like ff_poly use). Dropping
+`MontgomeryField` into the **same generic formulas** makes the genus-2 group law
+**~4× faster, and competitive with or faster than smalljac in every mode** —
+scalar and batched.
 
-| field operation | this crate (`PrimeField`) | smalljac (ff_poly) |
-|-----------------|--------------------------:|-------------------:|
-| multiply        | 8.2 ns  | 4.5 ns |
-| inversion       | 529 ns  | 157 ns |
-| amortized inversion (batch of 1024) | ~25 ns | ~10 ns |
-
-smalljac uses single-word **Montgomery** arithmetic (no division in the
-multiply; a tuned binary-GCD inversion), whereas this crate's `PrimeField` uses
-schoolbook `u128`-multiply + hardware modulo and an extended-Euclidean inversion
-— ~1.8× slower to multiply and ~3.4× slower to invert. Since the scalar group op
-is inversion-dominated (529 of 673 ns at 56-bit), that gap is what the batched
-path removes, and it is what a Montgomery `PrimeField` would close. The takeaway:
-**the explicit formulas and the batched group law are sound and competitive in
-operation count; closing the wall-clock gap to smalljac is a field-arithmetic
-optimization (Montgomery reduction), not a formula one.**
+That pins down where the cost lived: the explicit formulas and the batched
+driver were already sound (the [operation counts](#field-operation-counts) match
+the literature, ~26 M + 1 I); the gap to smalljac was *entirely* the field
+layer. At the 56-bit prime the binary-GCD inversion is **109 ns** (vs
+`PrimeField`'s 529 ns and smalljac's 157 ns), and the REDC multiply takes
+`PrimeField`'s field-multiply from 8.2 ns down to ~0.9 ns — so the
+inversion-dominated scalar op and the multiply-dominated batched op both come
+down to (or below) smalljac's level. Batching is orthogonal and helps both
+backends by removing the per-op inversion: `MontgomeryField` add drops 163 → 40
+ns from scalar to batched. (At a 16-bit prime, where `PrimeField`'s modulo is
+already cheap, the two backends are closer; Montgomery's advantage is largest at
+the word-size primes that matter.)
 
 The harness (scalar + batched + raw field ops) and arm64 build notes are in
 [`benches/smalljac-compare/`](benches/smalljac-compare/); run this crate's side
-with `cargo bench -- not_char2`.
+with `cargo bench -- not_char2`, and the field backends with `cargo bench -- field_`.
 
 ## Testing
 

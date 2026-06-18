@@ -587,6 +587,283 @@ impl<const K: usize> std::fmt::Debug for BinaryExtField<K> {
     }
 }
 
+// =============================================================================
+// Montgomery prime field
+// =============================================================================
+
+/// `-P^{-1} mod 2^64` via Newton's iteration (requires `P` odd).
+const fn mont_pinv(p: u64) -> u64 {
+    let mut inv: u64 = 1; // correct mod 2 (p is odd)
+    let mut i = 0;
+    while i < 6 {
+        // each step doubles the number of correct low bits: 1→2→4→…→64
+        inv = inv.wrapping_mul(2u64.wrapping_sub(p.wrapping_mul(inv)));
+        i += 1;
+    }
+    inv.wrapping_neg()
+}
+
+/// `2^64 mod P`.
+const fn mont_r1(p: u64) -> u64 {
+    ((u64::MAX % p) + 1) % p
+}
+
+/// `2^128 mod P`.
+const fn mont_r2(p: u64) -> u64 {
+    let r = mont_r1(p) as u128;
+    ((r * r) % (p as u128)) as u64
+}
+
+/// A prime field in **Montgomery form** (radix `R = 2^64`), for odd primes
+/// `P < 2^63`.
+///
+/// Multiplication uses Montgomery reduction (REDC — no hardware division) and
+/// inversion uses a binary extended GCD (no division either), the same field
+/// arithmetic strategy fast C libraries such as smalljac / ff_poly use. It
+/// implements the exact same [`Field`] trait as [`PrimeField`], so it is a
+/// drop-in replacement in the generic divisor formulas — typically ~2× faster to
+/// multiply and ~2–3× faster to invert than `PrimeField` for word-size primes.
+///
+/// The stored value is the Montgomery representative `a·R mod P`; equality and
+/// hashing on that representative are canonical because every reduction returns
+/// a value in `[0, P)`.
+#[derive(Clone, Copy, Default, PartialEq, Eq)]
+pub struct MontgomeryField<const P: u64> {
+    mont: u64,
+}
+
+impl<const P: u64> MontgomeryField<P> {
+    const PINV: u64 = mont_pinv(P); // -P^{-1} mod 2^64
+    const R1: u64 = mont_r1(P); // Montgomery form of 1 (= 2^64 mod P)
+    const R2: u64 = mont_r2(P); // converts into Montgomery form (= 2^128 mod P)
+
+    /// Montgomery reduction: for `t < P·2^64`, returns `t·2^{-64} mod P`.
+    #[inline]
+    fn redc(t: u128) -> u64 {
+        let m = (t as u64).wrapping_mul(Self::PINV);
+        let sum = t.wrapping_add((m as u128) * (P as u128));
+        let res = (sum >> 64) as u64;
+        if res >= P {
+            res - P
+        } else {
+            res
+        }
+    }
+
+    #[inline]
+    fn montmul(a: u64, b: u64) -> u64 {
+        Self::redc((a as u128) * (b as u128))
+    }
+
+    /// Create a field element from an ordinary integer (reduced mod `P`).
+    #[inline]
+    pub fn new(value: u64) -> Self {
+        Self {
+            mont: Self::montmul(value % P, Self::R2),
+        }
+    }
+
+    /// Create from a signed integer.
+    #[inline]
+    pub fn from_i64(value: i64) -> Self {
+        if value >= 0 {
+            Self::new(value as u64)
+        } else {
+            Self::new((P as i64 + (value % P as i64)) as u64)
+        }
+    }
+
+    /// The ordinary (non-Montgomery) representative in `[0, P)`.
+    #[inline]
+    pub fn value(&self) -> u64 {
+        Self::redc(self.mont as u128)
+    }
+
+    /// `a^{-1} mod P` for `0 < a < P`, via binary extended GCD (HAC 14.61),
+    /// keeping the running coefficients reduced mod `P`. No division.
+    #[inline]
+    fn modinv(a: u64) -> u64 {
+        let half = |x: u64| {
+            if x & 1 == 0 {
+                x >> 1
+            } else {
+                (x + P) >> 1 // x < P < 2^63 ⇒ x + P < 2^64
+            }
+        };
+        let submod = |x: u64, y: u64| if x >= y { x - y } else { x + P - y };
+        let (mut u, mut v) = (a, P);
+        let (mut x1, mut x2) = (1u64, 0u64);
+        while u != 1 && v != 1 {
+            while u & 1 == 0 {
+                u >>= 1;
+                x1 = half(x1);
+            }
+            while v & 1 == 0 {
+                v >>= 1;
+                x2 = half(x2);
+            }
+            if u >= v {
+                u -= v;
+                x1 = submod(x1, x2);
+            } else {
+                v -= u;
+                x2 = submod(x2, x1);
+            }
+        }
+        if u == 1 {
+            x1
+        } else {
+            x2
+        }
+    }
+}
+
+impl<const P: u64> Field for MontgomeryField<P> {
+    #[inline]
+    fn zero() -> Self {
+        Self { mont: 0 }
+    }
+
+    #[inline]
+    fn one() -> Self {
+        Self { mont: Self::R1 }
+    }
+
+    #[inline]
+    fn is_zero(&self) -> bool {
+        self.mont == 0
+    }
+
+    #[inline]
+    fn inv(&self) -> Self {
+        assert!(!self.is_zero(), "Cannot invert zero");
+        // Montgomery form of a^{-1} = montmul(ordinary_inv(a), R2).
+        Self {
+            mont: Self::montmul(Self::modinv(self.value()), Self::R2),
+        }
+    }
+
+    #[inline]
+    fn square(&self) -> Self {
+        Self {
+            mont: Self::montmul(self.mont, self.mont),
+        }
+    }
+
+    #[inline]
+    fn random<R: rand::Rng>(rng: &mut R) -> Self {
+        Self::new(rng.gen::<u64>() % P)
+    }
+}
+
+impl<const P: u64> Add for MontgomeryField<P> {
+    type Output = Self;
+    #[inline]
+    fn add(self, rhs: Self) -> Self {
+        let s = self.mont + rhs.mont; // both < P < 2^63 ⇒ no overflow
+        Self {
+            mont: if s >= P { s - P } else { s },
+        }
+    }
+}
+
+impl<const P: u64> AddAssign for MontgomeryField<P> {
+    #[inline]
+    fn add_assign(&mut self, rhs: Self) {
+        *self = *self + rhs;
+    }
+}
+
+impl<const P: u64> Sub for MontgomeryField<P> {
+    type Output = Self;
+    #[inline]
+    fn sub(self, rhs: Self) -> Self {
+        Self {
+            mont: if self.mont >= rhs.mont {
+                self.mont - rhs.mont
+            } else {
+                self.mont + P - rhs.mont
+            },
+        }
+    }
+}
+
+impl<const P: u64> SubAssign for MontgomeryField<P> {
+    #[inline]
+    fn sub_assign(&mut self, rhs: Self) {
+        *self = *self - rhs;
+    }
+}
+
+impl<const P: u64> Mul for MontgomeryField<P> {
+    type Output = Self;
+    #[inline]
+    fn mul(self, rhs: Self) -> Self {
+        Self {
+            mont: Self::montmul(self.mont, rhs.mont),
+        }
+    }
+}
+
+impl<const P: u64> MulAssign for MontgomeryField<P> {
+    #[inline]
+    fn mul_assign(&mut self, rhs: Self) {
+        *self = *self * rhs;
+    }
+}
+
+impl<const P: u64> Div for MontgomeryField<P> {
+    type Output = Self;
+    #[inline]
+    #[allow(clippy::suspicious_arithmetic_impl)]
+    fn div(self, rhs: Self) -> Self {
+        self * rhs.inv()
+    }
+}
+
+impl<const P: u64> DivAssign for MontgomeryField<P> {
+    #[inline]
+    fn div_assign(&mut self, rhs: Self) {
+        *self = *self / rhs;
+    }
+}
+
+impl<const P: u64> Neg for MontgomeryField<P> {
+    type Output = Self;
+    #[inline]
+    fn neg(self) -> Self {
+        Self {
+            mont: if self.mont == 0 { 0 } else { P - self.mont },
+        }
+    }
+}
+
+impl<const P: u64> From<u64> for MontgomeryField<P> {
+    #[inline]
+    fn from(value: u64) -> Self {
+        Self::new(value)
+    }
+}
+
+impl<const P: u64> From<i64> for MontgomeryField<P> {
+    #[inline]
+    fn from(value: i64) -> Self {
+        Self::from_i64(value)
+    }
+}
+
+impl<const P: u64> std::fmt::Display for MontgomeryField<P> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.value())
+    }
+}
+
+impl<const P: u64> std::fmt::Debug for MontgomeryField<P> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "MontgomeryField<{}>({})", P, self.value())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -886,5 +1163,55 @@ mod tests {
         let left = a * (b + one);
         let right = a * b + a;
         assert_eq!(left, right);
+    }
+
+    // ---- MontgomeryField: must agree exactly with PrimeField ----
+
+    #[test]
+    fn montgomery_matches_prime_field() {
+        use rand::rngs::StdRng;
+        use rand::{Rng, SeedableRng};
+        const P: u64 = 72057594037927931; // 56-bit prime
+        type M = MontgomeryField<P>;
+        type Q = PrimeField<P>;
+
+        let mut rng = StdRng::seed_from_u64(99);
+        // round-trip new/value, and one/zero
+        assert_eq!(M::zero().value(), 0);
+        assert_eq!(M::one().value(), 1);
+        for _ in 0..10_000 {
+            let x = rng.gen::<u64>() % P;
+            let y = rng.gen::<u64>() % P;
+            let (mx, my) = (M::new(x), M::new(y));
+            let (qx, qy) = (Q::new(x), Q::new(y));
+            assert_eq!(mx.value(), x, "round-trip");
+            assert_eq!((mx + my).value(), (qx + qy).value(), "add");
+            assert_eq!((mx - my).value(), (qx - qy).value(), "sub");
+            assert_eq!((mx * my).value(), (qx * qy).value(), "mul");
+            assert_eq!((-mx).value(), (-qx).value(), "neg");
+            assert_eq!(mx.square().value(), (qx * qx).value(), "square");
+            if x != 0 {
+                assert_eq!(mx.inv().value(), qx.inv().value(), "inv");
+                assert_eq!((mx * mx.inv()).value(), 1, "a * a^-1 = 1");
+                assert_eq!((my / mx).value(), (qy / qx).value(), "div");
+            }
+        }
+    }
+
+    #[test]
+    fn montgomery_small_prime_exhaustive() {
+        // Exhaustively check inv against PrimeField on a small prime.
+        const P: u64 = 65521;
+        type M = MontgomeryField<P>;
+        type Q = PrimeField<P>;
+        for x in 1..P {
+            let m = M::new(x);
+            assert_eq!(
+                m.inv().value(),
+                Q::new(x).inv().value(),
+                "inv mismatch at {x}"
+            );
+            assert_eq!((m * m.inv()).value(), 1);
+        }
     }
 }
