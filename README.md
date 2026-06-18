@@ -108,6 +108,8 @@ Ramified model:
 | deg2 + deg2 (char2) | GF(2^8) | ~185 ns |
 | deg2 + deg2 (char2) | GF(2^16) | ~600 ns |
 | 2*deg2 (not_char2) | F_65521 | ~194 ns |
+| deg2 + deg2 (not_char2) | F_p (56-bit) | ~741 ns |
+| 2*deg2 (not_char2) | F_p (56-bit) | ~682 ns |
 
 Split model (degree-2 balanced divisors, negative basis):
 
@@ -124,6 +126,63 @@ Run benchmarks with:
 ```bash
 cargo bench
 ```
+
+### Field-operation counts
+
+Wall-clock comparisons across implementations are confounded by field size,
+operation definition, and language, so the explicit-formula literature compares
+**field-operation counts** instead (field-size independent). Counts below are
+for the generic-branch degree-2 `add`/`double` (negative basis), measured by
+running the actual formulas over an instrumented field
+(`cargo test --release g2::split::op_counts -- --nocapture`):
+
+| Operation | M (mul) | S (sqr) | I (inv) | A (add/sub/dbl) |
+|-----------|--------:|--------:|--------:|----------------:|
+| not_char2 — add    | 26 | 2 | 1 | 37 |
+| not_char2 — double | 31 | 3 | 1 | 38 |
+| arbitrary — add    | 30 | 1 | 1 | 36 |
+| arbitrary — double | 38 | 2 | 1 | 44 |
+| char2 — add        | 27 | 1 | 1 | 34 |
+| char2 — double     | 29 | 2 | 1 | 31 |
+
+Each group operation uses exactly **one** field inversion (affine formulas).
+These can be compared directly to the per-formula counts in Lange, Erickson–
+Jacobson–Stein (real genus 2), and Costello–Lauter.
+
+### Wall-clock comparison with smalljac
+
+[smalljac](https://math.mit.edu/~drew/smalljac.html) (Andrew Sutherland) is a
+highly optimized C library whose `hecurve_g2_compose` / `hecurve_g2_square`
+implement the genus-2 **imaginary** (ramified, `deg f = 5`) group law — the same
+model as this crate's `g2::ramified::not_char2`. Built and timed on the same
+machine (smalljac v4.1.3 + ff_poly v1.2.7, ported to arm64), exercising the
+affine path (`ctx = NULL`, one field inversion per op — matching this crate's
+affine formulas):
+
+| field | operation | this crate (ramified nch2) | smalljac |
+|-------|-----------|---------------------------:|---------:|
+| p = 65521 (16-bit) | add / double | 149 / 194 ns | 767 / 873 ns |
+| 56-bit prime (matched width) | add / double | 741 / 682 ns | 1470 / 1619 ns |
+
+**These numbers need context — cross-implementation wall-clock is confounded:**
+
+- **Field width dominates.** ff_poly is compiled for ≤57-bit primes and always
+  does 64-bit-wide Montgomery arithmetic, so smalljac barely changes from 16-bit
+  to 56-bit (767 → 1470 ns); this crate's `PrimeField` uses `u128`-multiply +
+  hardware modulo, much faster at 16-bit but scaling up with the modulus. **Only
+  the matched 56-bit row is a fair wall-clock comparison.**
+- **Batched inversion is disabled.** smalljac's real strength for point counting
+  is amortizing one inversion across many group ops (Montgomery's trick, via its
+  `ctx` state machine). Forcing `ctx = NULL` measures its un-batched affine path
+  — the right comparison for a *single* op, but not how smalljac runs in anger.
+- **Specialized vs general.** This crate's `add`/`double` are degree-2-specialized
+  explicit formulas (≈26 M, 1 I); `hecurve_g2_compose` is a general composition
+  routine that also handles the degenerate-degree cases.
+
+So the field-operation counts above remain the cleaner, field-size-independent
+comparison; the matched-width wall-clock merely confirms the specialized
+explicit formulas are competitive with a mature C implementation. The harness
+and build notes are in [`benches/smalljac-compare/`](benches/smalljac-compare/).
 
 ## Testing
 
