@@ -12,7 +12,7 @@
 //!
 //! Based on: Sebastian Lindner, 2019
 
-use crate::field::Field;
+use crate::field::{batch_invert, Field};
 
 /// Curve constants for a not-char-2 ramified genus 2 curve.
 ///
@@ -515,6 +515,289 @@ pub fn double<F: Field>(d: &DivisorCoords<F>, cc: &CurveConstants<F>) -> Divisor
     }
 }
 
+// =============================================================================
+// Batched inversion (Montgomery's trick)
+// =============================================================================
+//
+// Each generic degree-2 group operation performs exactly one field inversion.
+// When many *independent* operations are evaluated together, that inversion can
+// be amortized: split each operation into a pre-inversion phase (everything up
+// to the single `inv`) and a post-inversion phase (everything after), collect
+// the to-be-inverted values from the whole batch, invert them all with one field
+// inversion via [`batch_invert`], then finish each operation. This is exactly the
+// strategy smalljac uses through its `hecurve_ctx_t` state machine + the
+// `ff_parallel_invert` routine, and is what makes the affine group law fast in
+// the generic-group algorithms (e.g. BSGS order computations) that use it.
+//
+// Only the fully generic degree-2 path is batched (the rare special branches —
+// identity inputs, `d = 0`, degree-dropping `sp1 = 0` — fall back to the direct
+// [`add`]/[`double`], which do their own single inversion). On random inputs the
+// special cases occur with negligible probability, so the batch is essentially
+// uniform.
+
+/// Captured state of a generic degree-2 [`deg2_add`], taken just before its one
+/// inversion, so the result can be finished by [`deg2_add_post`] once the
+/// inverse is known. Produced by [`deg2_add_pre`].
+#[derive(Clone, Copy, Debug)]
+pub struct Deg2AddPre<F: Field> {
+    u1: F,
+    u0: F,
+    v1: F,
+    v0: F,
+    up1: F,
+    m1: F,
+    m3: F,
+    sp1: F,
+    sp0: F,
+    d: F,
+}
+
+/// Phase 1 of a generic degree-2 + degree-2 addition: compute everything up to
+/// the single inversion. Returns `Some((state, to_invert))` for the generic case
+/// (`d ≠ 0` and `sp1 ≠ 0`), where `to_invert = d·sp1` is the value the caller
+/// must invert before calling [`deg2_add_post`]; returns `None` when a special
+/// branch applies, in which case the caller should fall back to [`deg2_add`].
+#[inline]
+#[allow(clippy::too_many_arguments)]
+pub fn deg2_add_pre<F: Field>(
+    u1: F,
+    u0: F,
+    v1: F,
+    v0: F,
+    up1: F,
+    up0: F,
+    vp1: F,
+    vp0: F,
+    _cc: &CurveConstants<F>,
+) -> Option<(Deg2AddPre<F>, F)> {
+    let m3 = up1 - u1;
+    let m4 = u0 - up0;
+    let m1 = m4 + up1 * m3;
+    let m2 = -up0 * m3;
+    let d = m1 * m4 - m2 * m3;
+    if d.is_zero() {
+        return None;
+    }
+    let r0 = vp0 - v0;
+    let r1 = vp1 - v1;
+    let sp1 = r0 * m3 + r1 * m4;
+    let sp0 = r0 * m1 + r1 * m2;
+    if sp1.is_zero() {
+        return None;
+    }
+    Some((
+        Deg2AddPre {
+            u1,
+            u0,
+            v1,
+            v0,
+            up1,
+            m1,
+            m3,
+            sp1,
+            sp0,
+            d,
+        },
+        d * sp1,
+    ))
+}
+
+/// Phase 2 of a generic degree-2 addition: finish using `inv = (d·sp1)⁻¹`
+/// (the inverse of the value returned by [`deg2_add_pre`]). Identical arithmetic
+/// to the `sp1 ≠ 0` tail of [`deg2_add`].
+#[inline]
+pub fn deg2_add_post<F: Field>(pre: &Deg2AddPre<F>, inv: F) -> DivisorCoords<F> {
+    let Deg2AddPre {
+        u1,
+        u0,
+        v1,
+        v0,
+        up1,
+        m1,
+        m3,
+        sp1,
+        sp0,
+        d,
+    } = *pre;
+
+    let w1 = inv; // (d·sp1)⁻¹
+    let w2 = w1 * d;
+    let w3 = w2 * d;
+    let w4 = w3.square();
+    let s1 = w1 * sp1.square();
+    let spp0 = sp0 * w2;
+
+    let t1 = spp0 - m3;
+    let t2 = t1 - w4;
+    let t3 = w3 * v1;
+    let upp1 = spp0 + t2;
+    let upp0 = spp0 * (t1 - m3) + m1 + t3 + t3 + w4 * (u1 + up1);
+
+    let t0 = upp0 - u0;
+    let t1 = u1 - upp1;
+    let vpp1 = s1 * (t1 * t2 + t0) - v1;
+    let vpp0 = s1 * (spp0 * t0 + upp0 * t1) - v0;
+
+    DivisorCoords::deg2(upp1, upp0, vpp1, vpp0)
+}
+
+/// Captured state of a generic degree-2 [`deg2_dbl`], taken just before its one
+/// inversion. Produced by [`deg2_dbl_pre`], consumed by [`deg2_dbl_post`].
+#[derive(Clone, Copy, Debug)]
+pub struct Deg2DblPre<F: Field> {
+    u1: F,
+    u0: F,
+    v1: F,
+    v0: F,
+    sp1: F,
+    sp0: F,
+    d: F,
+}
+
+/// Phase 1 of a generic degree-2 doubling. Returns `Some((state, to_invert))`
+/// with `to_invert = d·sp1` for the generic case, else `None` (fall back to
+/// [`deg2_dbl`]).
+#[inline]
+pub fn deg2_dbl_pre<F: Field>(
+    u1: F,
+    u0: F,
+    v1: F,
+    v0: F,
+    cc: &CurveConstants<F>,
+) -> Option<(Deg2DblPre<F>, F)> {
+    let CurveConstants { f3, f2, .. } = *cc;
+
+    let m3 = -v1 - v1;
+    let m4 = v0 + v0;
+    let m1 = m4 + m3 * u1;
+    let m2 = -m3 * u0;
+    let d = m4 * m1 - m2 * m3;
+    if d.is_zero() {
+        return None;
+    }
+
+    let t0 = u1.square();
+    let t1 = f3 + t0;
+    let t2 = u0 + u0;
+    let t3 = t1 - t2;
+    let r1 = t0 + t0 + t3;
+    let r0 = u1 * (t2 - t3) + f2 - v1.square();
+
+    let sp0 = r0 * m1 + r1 * m2;
+    let sp1 = r0 * m3 + r1 * m4;
+    if sp1.is_zero() {
+        return None;
+    }
+    Some((
+        Deg2DblPre {
+            u1,
+            u0,
+            v1,
+            v0,
+            sp1,
+            sp0,
+            d,
+        },
+        d * sp1,
+    ))
+}
+
+/// Phase 2 of a generic degree-2 doubling: finish using `inv = (d·sp1)⁻¹`.
+/// Identical arithmetic to the `sp1 ≠ 0` tail of [`deg2_dbl`].
+#[inline]
+pub fn deg2_dbl_post<F: Field>(pre: &Deg2DblPre<F>, inv: F) -> DivisorCoords<F> {
+    let Deg2DblPre {
+        u1,
+        u0,
+        v1,
+        v0,
+        sp1,
+        sp0,
+        d,
+    } = *pre;
+
+    let w1 = inv; // (d·sp1)⁻¹
+    let w2 = w1 * d;
+    let w3 = w2 * d;
+    let w4 = w3.square();
+    let s1 = w1 * sp1.square();
+    let spp0 = sp0 * w2;
+
+    let t2 = spp0 - w4;
+    let t3 = w3 * v1 + w4 * u1;
+    let upp1 = spp0 + t2;
+    let upp0 = spp0.square() + t3 + t3;
+
+    let t0 = upp0 - u0;
+    let t1 = u1 - upp1;
+    let vpp1 = s1 * (t1 * t2 + t0) - v1;
+    let vpp0 = s1 * (spp0 * t0 + upp0 * t1) - v0;
+
+    DivisorCoords::deg2(upp1, upp0, vpp1, vpp0)
+}
+
+/// Add many divisor pairs with a single field inversion for the whole batch.
+///
+/// Equivalent to mapping [`add`] over `pairs`, but the one inversion each generic
+/// degree-2 addition would perform is amortized across the batch via
+/// [`batch_invert`] (Montgomery's trick). The result is identical, element for
+/// element, to calling [`add`] on each pair.
+pub fn add_batch<F: Field>(
+    pairs: &[(DivisorCoords<F>, DivisorCoords<F>)],
+    cc: &CurveConstants<F>,
+) -> Vec<DivisorCoords<F>> {
+    let mut out = vec![DivisorCoords::identity(); pairs.len()];
+    let mut pres: Vec<(usize, Deg2AddPre<F>)> = Vec::with_capacity(pairs.len());
+    let mut to_invert: Vec<F> = Vec::with_capacity(pairs.len());
+
+    for (i, (d1, d2)) in pairs.iter().enumerate() {
+        if d1.degree() == 2 && d2.degree() == 2 {
+            if let Some((pre, t)) =
+                deg2_add_pre(d1.u1, d1.u0, d1.v1, d1.v0, d2.u1, d2.u0, d2.v1, d2.v0, cc)
+            {
+                pres.push((i, pre));
+                to_invert.push(t);
+                continue;
+            }
+        }
+        out[i] = add(d1, d2, cc);
+    }
+
+    batch_invert(&mut to_invert);
+    for ((i, pre), &inv) in pres.iter().zip(to_invert.iter()) {
+        out[*i] = deg2_add_post(pre, inv);
+    }
+    out
+}
+
+/// Double many divisors with a single field inversion for the whole batch.
+/// Result is identical, element for element, to calling [`double`] on each.
+pub fn double_batch<F: Field>(
+    ds: &[DivisorCoords<F>],
+    cc: &CurveConstants<F>,
+) -> Vec<DivisorCoords<F>> {
+    let mut out = vec![DivisorCoords::identity(); ds.len()];
+    let mut pres: Vec<(usize, Deg2DblPre<F>)> = Vec::with_capacity(ds.len());
+    let mut to_invert: Vec<F> = Vec::with_capacity(ds.len());
+
+    for (i, d) in ds.iter().enumerate() {
+        if d.degree() == 2 {
+            if let Some((pre, t)) = deg2_dbl_pre(d.u1, d.u0, d.v1, d.v0, cc) {
+                pres.push((i, pre));
+                to_invert.push(t);
+                continue;
+            }
+        }
+        out[i] = double(d, cc);
+    }
+
+    batch_invert(&mut to_invert);
+    for ((i, pre), &inv) in pres.iter().zip(to_invert.iter()) {
+        out[*i] = deg2_dbl_post(pre, inv);
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -585,5 +868,50 @@ mod tests {
         let cc = make_curve();
         let id = DivisorCoords::identity();
         assert_eq!(double(&id, &cc), id);
+    }
+
+    #[test]
+    fn batched_matches_scalar() {
+        use crate::field::PrimeField;
+        use rand::rngs::StdRng;
+        use rand::SeedableRng;
+        type F = PrimeField<65521>;
+
+        let mut rng = StdRng::seed_from_u64(7);
+        let cc = CurveConstants {
+            f3: F::random(&mut rng),
+            f2: F::random(&mut rng),
+            f1: F::random(&mut rng),
+            f0: F::random(&mut rng),
+        };
+        let rand_d2 = |rng: &mut StdRng| {
+            DivisorCoords::deg2(
+                F::random(rng),
+                F::random(rng),
+                F::random(rng),
+                F::random(rng),
+            )
+        };
+
+        // add_batch == add, element for element (covers generic + any special
+        // branches that fall through to the direct path).
+        let pairs: Vec<_> = (0..1000)
+            .map(|_| (rand_d2(&mut rng), rand_d2(&mut rng)))
+            .collect();
+        let batched = add_batch(&pairs, &cc);
+        for (i, (d1, d2)) in pairs.iter().enumerate() {
+            assert_eq!(batched[i], add(d1, d2, &cc), "add_batch mismatch at {i}");
+        }
+
+        // double_batch == double, element for element.
+        let singles: Vec<_> = pairs.iter().map(|(a, _)| *a).collect();
+        let batched_dbl = double_batch(&singles, &cc);
+        for (i, d) in singles.iter().enumerate() {
+            assert_eq!(
+                batched_dbl[i],
+                double(d, &cc),
+                "double_batch mismatch at {i}"
+            );
+        }
     }
 }

@@ -1,6 +1,6 @@
 //! Benchmarks for genus 2 ramified divisor arithmetic operations.
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use divisor_arithmetic::field::{BinaryExtField, Field, PrimeField};
 use divisor_arithmetic::g2::ramified::{arbitrary, char2, not_char2};
 
@@ -506,8 +506,62 @@ fn char2_benchmarks(c: &mut Criterion) {
 
 fn field_benchmarks(c: &mut Criterion) {
     bench_field_ops::<PrimeField<65521>>(c, "F65521");
+    bench_field_ops::<PrimeField<72057594037927931>>(c, "Fp56");
     bench_field_ops::<BinaryExtField<8>>(c, "GF256");
     bench_field_ops::<BinaryExtField<16>>(c, "GF65536");
+}
+
+// =============================================================================
+// Batched group law (Montgomery simultaneous inversion)
+// =============================================================================
+
+fn rand_deg2<F: Field>(rng: &mut impl rand::Rng) -> not_char2::DivisorCoords<F> {
+    not_char2::DivisorCoords::deg2(
+        F::random(rng),
+        F::random(rng),
+        F::random(rng),
+        F::random(rng),
+    )
+}
+
+/// Amortized throughput of the batched group law: one field inversion is shared
+/// across a batch of `n` independent ops via `batch_invert`. This is the metric
+/// that matters for smalljac-style generic-group algorithms (and matches its
+/// `ctx` + `ff_parallel_invert` path). Criterion reports elements/sec; per-op
+/// time = batch_time / n.
+fn bench_not_char2_batched<F: Field>(c: &mut Criterion, name: &str, n: usize) {
+    let mut rng = rand::thread_rng();
+    let cc = not_char2::CurveConstants {
+        f3: F::random(&mut rng),
+        f2: F::random(&mut rng),
+        f1: F::random(&mut rng),
+        f0: F::random(&mut rng),
+    };
+    let pairs: Vec<_> = (0..n)
+        .map(|_| (rand_deg2::<F>(&mut rng), rand_deg2::<F>(&mut rng)))
+        .collect();
+    let singles: Vec<_> = (0..n).map(|_| rand_deg2::<F>(&mut rng)).collect();
+
+    let mut g = c.benchmark_group("not_char2_batched");
+    g.throughput(Throughput::Elements(n as u64));
+    g.bench_with_input(
+        BenchmarkId::new("add_batch", format!("{name}/N={n}")),
+        &pairs,
+        |b, pairs| b.iter(|| not_char2::add_batch(black_box(pairs), black_box(&cc))),
+    );
+    g.bench_with_input(
+        BenchmarkId::new("dbl_batch", format!("{name}/N={n}")),
+        &singles,
+        |b, singles| b.iter(|| not_char2::double_batch(black_box(singles), black_box(&cc))),
+    );
+    g.finish();
+}
+
+fn batched_benchmarks(c: &mut Criterion) {
+    // Matched 56-bit width vs smalljac's batched (ctx + ff_parallel_invert) path,
+    // plus 16-bit for the field-width contrast.
+    bench_not_char2_batched::<PrimeField<72057594037927931>>(c, "Fp56", 1024);
+    bench_not_char2_batched::<PrimeField<65521>>(c, "F65521", 1024);
 }
 
 criterion_group!(
@@ -517,5 +571,6 @@ criterion_group!(
     arbitrary_benchmarks,
     char2_benchmarks,
     split_benchmarks,
+    batched_benchmarks,
 );
 criterion_main!(benches);

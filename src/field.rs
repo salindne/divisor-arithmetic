@@ -80,6 +80,49 @@ pub trait Field:
     fn random<R: rand::Rng>(rng: &mut R) -> Self;
 }
 
+/// Invert every element of `xs` in place using Montgomery's trick
+/// (simultaneous inversion): one field inversion plus `~3(n−1)` multiplications
+/// for the whole slice, instead of `n` inversions.
+///
+/// Zero entries are left as zero (their inverse is undefined and simply skipped),
+/// so callers can pass a slice that mixes invertible and zero values. This is the
+/// same batching smalljac performs with `ff_parallel_invert` to amortize the one
+/// expensive inversion across many independent group operations.
+///
+/// ```
+/// use divisor_arithmetic::field::{batch_invert, Field, PrimeField};
+/// type F = PrimeField<65521>;
+/// let mut xs = [F::new(2), F::new(3), F::new(0), F::new(7)];
+/// batch_invert(&mut xs);
+/// assert_eq!(xs[0], F::new(2).inv());
+/// assert_eq!(xs[2], F::new(0)); // zero is left untouched
+/// ```
+pub fn batch_invert<F: Field>(xs: &mut [F]) {
+    let n = xs.len();
+    if n == 0 {
+        return;
+    }
+    // Forward pass: prefix[i] = product of the nonzero entries in xs[0..i].
+    let mut prefix = Vec::with_capacity(n);
+    let mut acc = F::one();
+    for &x in xs.iter() {
+        prefix.push(acc);
+        if !x.is_zero() {
+            acc *= x;
+        }
+    }
+    // One inversion for the whole batch: acc = 1 / (product of all nonzero xs).
+    let mut acc = acc.inv();
+    // Backward pass: recover each individual inverse.
+    for i in (0..n).rev() {
+        if !xs[i].is_zero() {
+            let inv_i = acc * prefix[i];
+            acc *= xs[i];
+            xs[i] = inv_i;
+        }
+    }
+}
+
 /// A simple prime field implementation using u64 arithmetic.
 /// Suitable for small primes where p² fits in u128.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
