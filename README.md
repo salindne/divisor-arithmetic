@@ -105,72 +105,26 @@ let doubled = double(&d1, &curve);
 
 ## Performance
 
-Genus-2 `g2::ramified::not_char2` group law, measured on Apple Silicon (single
-core) at a 56-bit prime. The crate has two field backends behind the same
-`Field` trait — `PrimeField` (schoolbook `u128` multiply + hardware modulo,
-extended-Euclidean inverse) and the faster `MontgomeryField` (REDC multiply +
-binary-GCD inverse, no division).
+`g2::ramified::not_char2` compared to
+[smalljac](https://math.mit.edu/~drew/smalljac.html) (Sutherland) — a fast C
+library implementing the same genus-2 imaginary/ramified (degree-5) group law.
+Measured on the same machine (Apple Silicon, single core) at a 56-bit prime,
+using this crate's `MontgomeryField` backend.
 
-### Per operation (scalar)
+Both run the affine group law with one field inversion per operation. In
+**batched** mode a single inversion is amortized across `N = 1024` independent
+operations via Montgomery's trick — this crate's `add_batch` / `double_batch`
+(built on `field::batch_invert`), and smalljac's `hecurve_ctx_t` state machine +
+`ff_parallel_invert`. ns per operation:
 
-Each affine group operation performs **exactly one field inversion**; the times
-below include it.
+| operation | this crate (scalar) | smalljac (scalar) | this crate (batched) | smalljac (batched) |
+|-----------|--------------------:|------------------:|---------------------:|-------------------:|
+| `add`     | 163 | 190 | 40 | 48 |
+| `double`  | 168 | 210 | 46 | 54 |
 
-| operation | `PrimeField` | `MontgomeryField` |
-|-----------|-------------:|------------------:|
-| `add` (deg2 + deg2) | 673 ns | **163 ns** |
-| `double` (2·deg2)   | 691 ns | **168 ns** |
-
-The single inversion dominates the scalar cost: at the 56-bit prime it is 529 ns
-in `PrimeField` (extended-Euclidean) versus 109 ns in `MontgomeryField`
-(binary-GCD), and the REDC multiply is ~0.9 ns versus `PrimeField`'s 8.2 ns.
-
-### Batched throughput vs smalljac
-
-`add_batch` / `double_batch` share **one** inversion across a batch (`N = 1024`)
-via Montgomery's trick (`field::batch_invert`) — the throughput metric that
-matters for the generic-group order computations
-[smalljac](https://math.mit.edu/~drew/smalljac.html) (Sutherland) targets. Its
-`hecurve_g2_compose` / `_square` implement the same imaginary/ramified deg-5
-group law; its batched path is the `hecurve_ctx_t` state machine +
-`ff_parallel_invert`. Same machine, same 56-bit prime (depressed quintic
-`f₄ = 0`, required or smalljac reverts to generic Cantor), `MontgomeryField`,
-ns per operation:
-
-| operation | this crate, scalar | this crate, batched | smalljac, scalar | smalljac, batched |
-|-----------|-------------------:|--------------------:|-----------------:|------------------:|
-| `add`     | 163 | **40** | 190 | 48 |
-| `double`  | 168 | **46** | 210 | 54 |
-
-With `MontgomeryField` the crate matches or beats smalljac in both modes, and
-batching removes the per-op inversion (`add` 163 → 40 ns). This confirms the
-genus-2 explicit formulas and the batched driver were already sound — the earlier
-wall-clock gap was entirely the field-arithmetic layer. The harness (scalar +
-batched + raw field-op timing) and arm64 build notes are in
-[`benches/smalljac-compare/`](benches/smalljac-compare/); reproduce with
-`cargo bench -- not_char2` and `cargo bench -- field_`.
-
-### Field-operation counts
-
-Wall-clock comparisons across implementations are confounded by field size,
-operation definition, and language, so the explicit-formula literature compares
-**field-operation counts** instead (field-size independent). Counts below are
-for the generic-branch degree-2 `add`/`double` (negative basis), measured by
-running the actual formulas over an instrumented field
-(`cargo test --release g2::split::op_counts -- --nocapture`):
-
-| Operation | M (mul) | S (sqr) | I (inv) | A (add/sub/dbl) |
-|-----------|--------:|--------:|--------:|----------------:|
-| not_char2 — add    | 26 | 2 | 1 | 37 |
-| not_char2 — double | 31 | 3 | 1 | 38 |
-| arbitrary — add    | 30 | 1 | 1 | 36 |
-| arbitrary — double | 38 | 2 | 1 | 44 |
-| char2 — add        | 27 | 1 | 1 | 34 |
-| char2 — double     | 29 | 2 | 1 | 31 |
-
-Each group operation uses exactly **one** field inversion (affine formulas).
-These can be compared directly to the per-formula counts in Lange, Erickson–
-Jacobson–Stein (real genus 2), and Costello–Lauter.
+The crate matches or beats smalljac in both scalar and batched modes. Reproduce
+with `cargo bench -- not_char2`; the smalljac harness and arm64 build notes are
+in [`benches/smalljac-compare/`](benches/smalljac-compare/).
 
 ## Testing
 
