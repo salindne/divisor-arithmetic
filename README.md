@@ -27,6 +27,11 @@ This crate provides highly optimized implementations of divisor addition and dou
   - All formulas are cross-checked against a generic Cantor reference
     implementation (`generic::split`)
 
+- **Batched group law** (ramified `not_char2`): `add_batch` / `double_batch`
+  amortize the single field inversion across a whole batch of independent
+  operations via Montgomery's trick (`field::batch_invert`) — the same strategy
+  smalljac uses for generic-group order computations
+
 - **Field Implementations**:
   - `PrimeField<P>` - Prime fields F_p for small primes
   - `BinaryExtField<K>` - Binary extension fields GF(2^k) for k ≤ 24
@@ -108,8 +113,6 @@ Ramified model:
 | deg2 + deg2 (char2) | GF(2^8) | ~185 ns |
 | deg2 + deg2 (char2) | GF(2^16) | ~600 ns |
 | 2*deg2 (not_char2) | F_65521 | ~194 ns |
-| deg2 + deg2 (not_char2) | F_p (56-bit) | ~741 ns |
-| 2*deg2 (not_char2) | F_p (56-bit) | ~682 ns |
 
 Split model (degree-2 balanced divisors, negative basis):
 
@@ -149,40 +152,58 @@ Each group operation uses exactly **one** field inversion (affine formulas).
 These can be compared directly to the per-formula counts in Lange, Erickson–
 Jacobson–Stein (real genus 2), and Costello–Lauter.
 
-### Wall-clock comparison with smalljac
+### Wall-clock comparison with smalljac (scalar and batched)
 
 [smalljac](https://math.mit.edu/~drew/smalljac.html) (Andrew Sutherland) is a
 highly optimized C library whose `hecurve_g2_compose` / `hecurve_g2_square`
 implement the genus-2 **imaginary** (ramified, `deg f = 5`) group law — the same
-model as this crate's `g2::ramified::not_char2`. Built and timed on the same
-machine (smalljac v4.1.3 + ff_poly v1.2.7, ported to arm64), exercising the
-affine path (`ctx = NULL`, one field inversion per op — matching this crate's
-affine formulas):
+model as this crate's `g2::ramified::not_char2`. Both are compared two ways:
 
-| field | operation | this crate (ramified nch2) | smalljac |
-|-------|-----------|---------------------------:|---------:|
-| p = 65521 (16-bit) | add / double | 149 / 194 ns | 767 / 873 ns |
-| 56-bit prime (matched width) | add / double | 741 / 682 ns | 1470 / 1619 ns |
+- **scalar** — one field inversion per group operation (this crate's plain
+  `add`/`double`; smalljac with `ctx = NULL`);
+- **batched** — one field inversion shared across a batch of `N = 1024`
+  independent operations via Montgomery's trick (this crate's
+  [`add_batch`/`double_batch`] + [`field::batch_invert`]; smalljac's
+  `hecurve_ctx_t` state machine + `ff_parallel_invert`). This is the throughput
+  metric that matters for the generic-group order computations smalljac targets.
 
-**These numbers need context — cross-implementation wall-clock is confounded:**
+All numbers below were measured **on the same machine** (Apple Silicon, single
+core; smalljac v4.1.3 + ff_poly v1.2.7 ported to arm64), on the same depressed
+monic quintic (`f₄ = 0` — required, else smalljac falls back to generic Cantor),
+in ns per group operation:
 
-- **Field width dominates.** ff_poly is compiled for ≤57-bit primes and always
-  does 64-bit-wide Montgomery arithmetic, so smalljac barely changes from 16-bit
-  to 56-bit (767 → 1470 ns); this crate's `PrimeField` uses `u128`-multiply +
-  hardware modulo, much faster at 16-bit but scaling up with the modulus. **Only
-  the matched 56-bit row is a fair wall-clock comparison.**
-- **Batched inversion is disabled.** smalljac's real strength for point counting
-  is amortizing one inversion across many group ops (Montgomery's trick, via its
-  `ctx` state machine). Forcing `ctx = NULL` measures its un-batched affine path
-  — the right comparison for a *single* op, but not how smalljac runs in anger.
-- **Specialized vs general.** This crate's `add`/`double` are degree-2-specialized
-  explicit formulas (≈26 M, 1 I); `hecurve_g2_compose` is a general composition
-  routine that also handles the degenerate-degree cases.
+| field | op | this crate, scalar | smalljac, scalar | this crate, batched | smalljac, batched |
+|-------|----|------------------:|-----------------:|-------------------:|------------------:|
+| p = 65521 (16-bit) | add    | 222 | 100 | 99  | 47 |
+| p = 65521 (16-bit) | double | 245 | 105 | 115 | 54 |
+| 56-bit prime       | add    | 673 | 190 | 348 | 48 |
+| 56-bit prime       | double | 691 | 210 | 384 | 54 |
 
-So the field-operation counts above remain the cleaner, field-size-independent
-comparison; the matched-width wall-clock merely confirms the specialized
-explicit formulas are competitive with a mature C implementation. The harness
-and build notes are in [`benches/smalljac-compare/`](benches/smalljac-compare/).
+Batching helps both implementations (it removes the inversion): this crate's
+56-bit add drops 673 → 348 ns (1.9×), smalljac's 190 → 48 ns (4×). But smalljac
+is faster in every cell, and the reason is the **field-arithmetic layer**, not
+the genus-2 formulas (the [operation counts](#field-operation-counts) — ~26 M,
+1 I — are essentially the same). Measured field ops at the 56-bit prime:
+
+| field operation | this crate (`PrimeField`) | smalljac (ff_poly) |
+|-----------------|--------------------------:|-------------------:|
+| multiply        | 8.2 ns  | 4.5 ns |
+| inversion       | 529 ns  | 157 ns |
+| amortized inversion (batch of 1024) | ~25 ns | ~10 ns |
+
+smalljac uses single-word **Montgomery** arithmetic (no division in the
+multiply; a tuned binary-GCD inversion), whereas this crate's `PrimeField` uses
+schoolbook `u128`-multiply + hardware modulo and an extended-Euclidean inversion
+— ~1.8× slower to multiply and ~3.4× slower to invert. Since the scalar group op
+is inversion-dominated (529 of 673 ns at 56-bit), that gap is what the batched
+path removes, and it is what a Montgomery `PrimeField` would close. The takeaway:
+**the explicit formulas and the batched group law are sound and competitive in
+operation count; closing the wall-clock gap to smalljac is a field-arithmetic
+optimization (Montgomery reduction), not a formula one.**
+
+The harness (scalar + batched + raw field ops) and arm64 build notes are in
+[`benches/smalljac-compare/`](benches/smalljac-compare/); run this crate's side
+with `cargo bench -- not_char2`.
 
 ## Testing
 

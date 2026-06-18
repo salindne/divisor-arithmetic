@@ -1,11 +1,23 @@
 # smalljac wall-clock comparison
 
 [`bench.c`](bench.c) times smalljac's genus-2 imaginary/ramified group law
-(`hecurve_g2_compose` = add, `hecurve_g2_square` = double) on the affine path
-(`ctx = NULL`, one field inversion per op), so it can be put next to this
-crate's `g2::ramified::not_char2` `cargo bench` numbers. See the
-"Wall-clock comparison with smalljac" section of the top-level
-[`README.md`](../../README.md) for the results and the caveats.
+(`hecurve_g2_compose` = add, `hecurve_g2_square` = double) so it can be put next
+to this crate's `g2::ramified::not_char2` `cargo bench` numbers. It reports:
+
+- **raw field ops** — multiply, inversion, and amortized (parallel) inversion;
+- **scalar** group law — `ctx = NULL`, one inversion per op;
+- **batched** group law — the `hecurve_ctx_t` state machine + `ff_parallel_invert`
+  (Montgomery's trick), one inversion shared across `N = 1024` ops, matching this
+  crate's `add_batch`/`double_batch`.
+
+See the "Wall-clock comparison with smalljac" section of the top-level
+[`README.md`](../../README.md) for the results and analysis.
+
+> **Important:** the curve must use a *depressed* quintic (`f[4] = 0`, as the
+> harness does). With `f[4] ≠ 0`, `hecurve_g2_compose` silently reverts to the
+> slow generic **Cantor** path and the measurement is ~5–8× too slow and
+> meaningless. This crate's `not_char2` model is `y² = x⁵ + f₃x³ + …`, i.e.
+> `f₄ = 0`, so matching it is also the correct comparison.
 
 smalljac and ff_poly are **not vendored** here (they are GPL; this crate is
 MIT). Download them yourself:
