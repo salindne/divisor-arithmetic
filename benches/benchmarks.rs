@@ -477,10 +477,13 @@ fn not_char2_benchmarks(c: &mut Criterion) {
     bench_not_char2_deg2_add::<PrimeField<7>>(c, "F7");
     bench_not_char2_deg2_add::<PrimeField<8191>>(c, "F8191");
     bench_not_char2_deg2_add::<PrimeField<65521>>(c, "F65521");
+    // ~56-bit prime: matched-width comparison vs smalljac (built for 57-bit primes).
+    bench_not_char2_deg2_add::<PrimeField<72057594037927931>>(c, "Fp56");
 
     bench_not_char2_deg2_dbl::<PrimeField<7>>(c, "F7");
     bench_not_char2_deg2_dbl::<PrimeField<8191>>(c, "F8191");
     bench_not_char2_deg2_dbl::<PrimeField<65521>>(c, "F65521");
+    bench_not_char2_deg2_dbl::<PrimeField<72057594037927931>>(c, "Fp56");
 }
 
 fn arbitrary_benchmarks(c: &mut Criterion) {
