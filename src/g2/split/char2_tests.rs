@@ -128,7 +128,13 @@ fn neutral_pos<const K: usize>(cc: &CurveConstants<GF<K>>) -> Divisor<GF<K>> {
     Divisor::new(Poly::constant(GF::<K>::one()), vpl, w, 1)
 }
 
-fn deg1_basis<const K: usize>(cc: &CurveConstants<GF<K>>, basis: &Poly<GF<K>>, a: GF<K>, b: GF<K>, n: i32) -> Divisor<GF<K>> {
+fn deg1_basis<const K: usize>(
+    cc: &CurveConstants<GF<K>>,
+    basis: &Poly<GF<K>>,
+    a: GF<K>,
+    b: GF<K>,
+    n: i32,
+) -> Divisor<GF<K>> {
     let f = cc.f_poly();
     let h = cc.h_poly();
     let u = Poly::from_coeffs(vec![-a, GF::<K>::one()]);
@@ -139,7 +145,10 @@ fn deg1_basis<const K: usize>(cc: &CurveConstants<GF<K>>, basis: &Poly<GF<K>>, a
 }
 
 /// Compose `g` random base divisors via the trusted oracle (neg basis).
-fn random_valid_neg<const K: usize, R: Rng>(cc: &CurveConstants<GF<K>>, rng: &mut R) -> Divisor<GF<K>> {
+fn random_valid_neg<const K: usize, R: Rng>(
+    cc: &CurveConstants<GF<K>>,
+    rng: &mut R,
+) -> Divisor<GF<K>> {
     let f = cc.f_poly();
     let h = cc.h_poly();
     let vn = cc.vn();
@@ -167,7 +176,10 @@ fn random_valid_neg<const K: usize, R: Rng>(cc: &CurveConstants<GF<K>>, rng: &mu
     d
 }
 
-fn random_valid_pos<const K: usize, R: Rng>(cc: &CurveConstants<GF<K>>, rng: &mut R) -> Divisor<GF<K>> {
+fn random_valid_pos<const K: usize, R: Rng>(
+    cc: &CurveConstants<GF<K>>,
+    rng: &mut R,
+) -> Divisor<GF<K>> {
     let f = cc.f_poly();
     let h = cc.h_poly();
     let vpl = cc.vpl();
@@ -210,17 +222,29 @@ fn a0_check<const K: usize>(seed: u64, curves: usize, divisors: usize) {
         for _ in 0..divisors {
             // neg round-trip incl. n, and oracle add/double well-formed
             let d1 = random_valid_neg::<K, _>(&cc, &mut rng);
-            assert_eq!(to_generic_c2::<K>(&from_generic(&d1), &cc, &vn), d1, "c2 neg round-trip");
+            assert_eq!(
+                to_generic_c2::<K>(&from_generic(&d1), &cc, &vn),
+                d1,
+                "c2 neg round-trip"
+            );
             let d2 = random_valid_neg::<K, _>(&cc, &mut rng);
             let _ = split::double_neg(&d1, &f, &h, &vn, G);
             if from_generic(&d1) != from_generic(&d2) {
                 let s = split::add_neg(&d1, &d2, &f, &h, &vn, G);
                 let s2 = split::add_neg(&d2, &d1, &f, &h, &vn, G);
-                assert_eq!(from_generic(&s), from_generic(&s2), "c2 neg add commutativity");
+                assert_eq!(
+                    from_generic(&s),
+                    from_generic(&s2),
+                    "c2 neg add commutativity"
+                );
             }
             // pos round-trip
             let p1 = random_valid_pos::<K, _>(&cc, &mut rng);
-            assert_eq!(to_generic_c2::<K>(&from_generic(&p1), &cc, &vpl), p1, "c2 pos round-trip");
+            assert_eq!(
+                to_generic_c2::<K>(&from_generic(&p1), &cc, &vpl),
+                p1,
+                "c2 pos round-trip"
+            );
             let _ = split::double_pos(&p1, &f, &h, &vpl, G);
         }
     }
@@ -251,7 +275,12 @@ fn check_double_neg<const K: usize>(d: &Divisor<GF<K>>, cc: &CurveConstants<GF<K
     let vn = cc.vn();
     let got = double_neg(&from_generic(d), cc);
     let expected = from_generic(&split::double_neg(d, &f, &h, &vn, G));
-    assert_eq!(got, expected, "c2 double_neg mismatch for {:?}", from_generic(d));
+    assert_eq!(
+        got,
+        expected,
+        "c2 double_neg mismatch for {:?}",
+        from_generic(d)
+    );
 }
 
 fn check_double_pos<const K: usize>(d: &Divisor<GF<K>>, cc: &CurveConstants<GF<K>>) {
@@ -260,31 +289,46 @@ fn check_double_pos<const K: usize>(d: &Divisor<GF<K>>, cc: &CurveConstants<GF<K
     let vpl = cc.vpl();
     let got = double_pos(&from_generic(d), cc);
     let expected = from_generic(&split::double_pos(d, &f, &h, &vpl, G));
-    assert_eq!(got, expected, "c2 double_pos mismatch for {:?}", from_generic(d));
+    assert_eq!(
+        got,
+        expected,
+        "c2 double_pos mismatch for {:?}",
+        from_generic(d)
+    );
 }
 
-fn check_add_neg<const K: usize>(d1: &Divisor<GF<K>>, d2: &Divisor<GF<K>>, cc: &CurveConstants<GF<K>>) {
+fn check_add_neg<const K: usize>(
+    d1: &Divisor<GF<K>>,
+    d2: &Divisor<GF<K>>,
+    cc: &CurveConstants<GF<K>>,
+) {
     let f = cc.f_poly();
     let h = cc.h_poly();
     let vn = cc.vn();
     let got = add_neg(&from_generic(d1), &from_generic(d2), cc);
     let expected = from_generic(&split::add_neg(d1, d2, &f, &h, &vn, G));
     assert_eq!(
-        got, expected,
+        got,
+        expected,
         "c2 add_neg mismatch for {:?} + {:?}",
         from_generic(d1),
         from_generic(d2)
     );
 }
 
-fn check_add_pos<const K: usize>(d1: &Divisor<GF<K>>, d2: &Divisor<GF<K>>, cc: &CurveConstants<GF<K>>) {
+fn check_add_pos<const K: usize>(
+    d1: &Divisor<GF<K>>,
+    d2: &Divisor<GF<K>>,
+    cc: &CurveConstants<GF<K>>,
+) {
     let f = cc.f_poly();
     let h = cc.h_poly();
     let vpl = cc.vpl();
     let got = add_pos(&from_generic(d1), &from_generic(d2), cc);
     let expected = from_generic(&split::add_pos(d1, d2, &f, &h, &vpl, G));
     assert_eq!(
-        got, expected,
+        got,
+        expected,
         "c2 add_pos mismatch for {:?} + {:?}",
         from_generic(d1),
         from_generic(d2)
@@ -399,7 +443,11 @@ fn c2_branch_coverage() {
     for (prefix, hi) in [("CDBL", 17), ("CADD", 58), ("CPDBL", 17), ("CPADD", 58)] {
         let labels: Vec<String> = (0..=hi).map(|i| format!("{prefix}{i:02}")).collect();
         let refs: Vec<&str> = labels.iter().map(|s| s.as_str()).collect();
-        all_missing.extend(super::coverage::missing(&refs).iter().map(|s| s.to_string()));
+        all_missing.extend(
+            super::coverage::missing(&refs)
+                .iter()
+                .map(|s| s.to_string()),
+        );
     }
 
     // These ADD branches are the rare "double-degenerate" cases (both a vanishing
@@ -411,8 +459,8 @@ fn c2_branch_coverage() {
     // uses a different irreducible than BinaryExtField, so coordinates differ).
     // Verified by direct correspondence rather than cross-check.
     const KNOWN_NEUTRAL_ONLY: &[&str] = &[
-        "CADD03", "CADD16", "CADD24", "CADD31", "CADD40", "CADD42",
-        "CPADD03", "CPADD15", "CPADD16", "CPADD20", "CPADD24", "CPADD40", "CPADD42",
+        "CADD03", "CADD16", "CADD24", "CADD31", "CADD40", "CADD42", "CPADD03", "CPADD15",
+        "CPADD16", "CPADD20", "CPADD24", "CPADD40", "CPADD42",
     ];
     let unexpected: Vec<&String> = all_missing
         .iter()
@@ -429,7 +477,10 @@ fn tmp_debug_one() {
     let mut rng = StdRng::seed_from_u64(9001);
     for _c in 0..12 {
         let cc = random_curve::<4, _>(&mut rng);
-        let f = cc.f_poly(); let h = cc.h_poly(); let vn = cc.vn(); let vpl = cc.vpl();
+        let f = cc.f_poly();
+        let h = cc.h_poly();
+        let vn = cc.vn();
+        let vpl = cc.vpl();
         for _ in 0..60 {
             let d1 = random_valid_neg::<4, _>(&cc, &mut rng);
             let _d2 = random_valid_neg::<4, _>(&cc, &mut rng);
@@ -440,13 +491,16 @@ fn tmp_debug_one() {
             let en = from_generic(&split::double_neg(&d1, &f, &h, &vn, G));
             if gn != en {
                 let o = split::double_neg(&d1, &f, &h, &vn, G);
-                println!("NEG INPUT u0={:?} u1={:?} v0={:?} v1={:?} n={}", dcn.u0,dcn.u1,dcn.v0,dcn.v1,dcn.n);
+                println!(
+                    "NEG INPUT u0={:?} u1={:?} v0={:?} v1={:?} n={}",
+                    dcn.u0, dcn.u1, dcn.v0, dcn.v1, dcn.n
+                );
                 println!("NEG vn = {:?}", vn);
                 println!("NEG GOT  = {:?}", gn);
                 println!("NEG EXP  = {:?}", en);
                 println!("NEG oracle u={:?} v={:?} n={}", o.u, o.v, o.n);
                 // re-run with debug
-                std::env::set_var("DBG2N","1");
+                std::env::set_var("DBG2N", "1");
                 let _ = double_neg(&dcn, &cc);
                 std::env::remove_var("DBG2N");
                 return;

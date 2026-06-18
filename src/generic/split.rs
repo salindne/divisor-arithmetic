@@ -56,7 +56,7 @@ impl<F: Field> Divisor<F> {
             u: Poly::constant(F::one()),
             v: v_basis.clone(),
             w,
-            n: ((g + 1) / 2) as i32,
+            n: g.div_ceil(2) as i32,
         }
     }
 
@@ -80,7 +80,7 @@ pub fn compute_vpl<F: Field>(f: &Poly<F>, g: usize) -> Poly<F> {
         let vpl_sq = &vpl * &vpl;
         let diff = f - &vpl_sq;
         let coeff = diff.coeff(g + 1 + i);
-        vpl = vpl + Poly::monomial(dinv * coeff, i);
+        vpl += Poly::monomial(dinv * coeff, i);
     }
     vpl
 }
@@ -100,7 +100,7 @@ fn compose_add<F: Field>(d1: &Divisor<F>, d2: &Divisor<F>, h: &Poly<F>, g: usize
     let mut u1 = d1.u.clone();
     let mut u2 = d2.u.clone();
     let mut w1 = d1.w.clone();
-    let mut s_deg = s.deg();
+    let s_deg;
 
     if !s.is_one() {
         let v2_plus_t1 = &d2.v + &t1; // v2 + v1 + h
@@ -109,7 +109,7 @@ fn compose_add<F: Field>(d1: &Divisor<F>, d2: &Divisor<F>, h: &Poly<F>, g: usize
             u1 = u1.exact_div(&s2);
             u2 = u2.exact_div(&s2);
             k = (a2 * k + b2 * w1.clone()).rem(&u2);
-            w1 = w1 * s2.clone();
+            w1 *= s2.clone();
             s_deg = s2.deg();
         } else {
             k = (a2 * k + b2 * w1.clone()).rem(&u2);
@@ -124,7 +124,7 @@ fn compose_add<F: Field>(d1: &Divisor<F>, d2: &Divisor<F>, h: &Poly<F>, g: usize
     let v = v1 + &t;
     let t1_plus_v = &t1 + &v; // (v1 + h) + v
     let w = (w1 - k * t1_plus_v).exact_div(&u2);
-    let n = d1.n + d2.n + s_deg - ((g as i32 + 1) / 2);
+    let n = d1.n + d2.n + s_deg - g.div_ceil(2) as i32;
     Divisor::new(u, v, w, n)
 }
 
@@ -141,7 +141,7 @@ fn compose_double<F: Field>(d1: &Divisor<F>, h: &Poly<F>, g: usize) -> Divisor<F
     if !s.is_one() {
         u1 = u1.exact_div(&s);
         k = (b1 * w1.clone()).rem(&u1);
-        w1 = w1 * s.clone();
+        w1 *= s.clone();
         s_deg = s.deg();
     } else {
         k = (b1 * w1.clone()).rem(&u1);
@@ -153,13 +153,19 @@ fn compose_double<F: Field>(d1: &Divisor<F>, h: &Poly<F>, g: usize) -> Divisor<F
     let v = v1 + &t;
     let t1_plus_t = &t1 + &t; // (2v1 + h) + T
     let w = (w1 - k * t1_plus_t).exact_div(&u1);
-    let n = 2 * d1.n + s_deg - ((g as i32 + 1) / 2);
+    let n = 2 * d1.n + s_deg - g.div_ceil(2) as i32;
     Divisor::new(u, v, w, n)
 }
 
 /// Normalize + reduce a semi-reduced divisor to `deg(u) ≤ g+1`, monic. `pos`
 /// selects the positive-basis reduce sign test. `vb` is the basis polynomial.
-fn finish<F: Field>(mut d: Divisor<F>, h: &Poly<F>, vb: &Poly<F>, g: usize, pos: bool) -> Divisor<F> {
+fn finish<F: Field>(
+    mut d: Divisor<F>,
+    h: &Poly<F>,
+    vb: &Poly<F>,
+    g: usize,
+    pos: bool,
+) -> Divisor<F> {
     let g1 = g as i32 + 1;
     let lc_v = vb.leading_coeff(); // lc(V)
     let lc_neg = (-(vb.clone()) - h.clone()).leading_coeff(); // lc(−V − h)
@@ -170,7 +176,7 @@ fn finish<F: Field>(mut d: Divisor<F>, h: &Poly<F>, vb: &Poly<F>, g: usize, pos:
         let tv = vb - &r;
         let vh = &d.v + h;
         let vht = &vh + &tv;
-        d.w = d.w - q * vht;
+        d.w -= q * vht;
         d.v = tv;
     }
 
@@ -209,7 +215,13 @@ fn finish<F: Field>(mut d: Divisor<F>, h: &Poly<F>, vb: &Poly<F>, g: usize, pos:
 // ---------------------------------------------------------------------------
 
 /// `Adjust_SPLIT_NEG`: reduce the balance weight into `0 ≤ n ≤ g − deg(u)`.
-pub fn adjust_neg<F: Field>(mut d: Divisor<F>, _f: &Poly<F>, h: &Poly<F>, v_neg: &Poly<F>, g: usize) -> Divisor<F> {
+pub fn adjust_neg<F: Field>(
+    mut d: Divisor<F>,
+    _f: &Poly<F>,
+    h: &Poly<F>,
+    v_neg: &Poly<F>,
+    g: usize,
+) -> Divisor<F> {
     let g_i32 = g as i32;
 
     if d.n < 0 {
@@ -236,7 +248,7 @@ pub fn adjust_neg<F: Field>(mut d: Divisor<F>, _f: &Poly<F>, h: &Poly<F>, v_neg:
         let tv = &(&d.v + &t) - &r;
         let vh = &d.v + h;
         let vht = &vh + &tv;
-        d.w = d.w - q * vht;
+        d.w -= q * vht;
         d.v = tv;
 
         while d.n > g_i32 - d.u.deg() + 1 {
@@ -270,14 +282,27 @@ pub fn adjust_neg<F: Field>(mut d: Divisor<F>, _f: &Poly<F>, h: &Poly<F>, v_neg:
 }
 
 /// `Add_SPLIT_NEG`.
-pub fn add_neg<F: Field>(d1: &Divisor<F>, d2: &Divisor<F>, f: &Poly<F>, h: &Poly<F>, v_neg: &Poly<F>, g: usize) -> Divisor<F> {
+pub fn add_neg<F: Field>(
+    d1: &Divisor<F>,
+    d2: &Divisor<F>,
+    f: &Poly<F>,
+    h: &Poly<F>,
+    v_neg: &Poly<F>,
+    g: usize,
+) -> Divisor<F> {
     let d = compose_add(d1, d2, h, g);
     let d = finish(d, h, v_neg, g, false);
     adjust_neg(d, f, h, v_neg, g)
 }
 
 /// `Double_SPLIT_NEG`.
-pub fn double_neg<F: Field>(d1: &Divisor<F>, f: &Poly<F>, h: &Poly<F>, v_neg: &Poly<F>, g: usize) -> Divisor<F> {
+pub fn double_neg<F: Field>(
+    d1: &Divisor<F>,
+    f: &Poly<F>,
+    h: &Poly<F>,
+    v_neg: &Poly<F>,
+    g: usize,
+) -> Divisor<F> {
     let d = compose_double(d1, h, g);
     let d = finish(d, h, v_neg, g, false);
     adjust_neg(d, f, h, v_neg, g)
@@ -288,7 +313,13 @@ pub fn double_neg<F: Field>(d1: &Divisor<F>, f: &Poly<F>, h: &Poly<F>, v_neg: &P
 // ---------------------------------------------------------------------------
 
 /// `Adjust_SPLIT_POS`: reduce the balance weight into `0 ≤ n ≤ g − deg(u)`.
-pub fn adjust_pos<F: Field>(mut d: Divisor<F>, _f: &Poly<F>, h: &Poly<F>, v_pos: &Poly<F>, g: usize) -> Divisor<F> {
+pub fn adjust_pos<F: Field>(
+    mut d: Divisor<F>,
+    _f: &Poly<F>,
+    h: &Poly<F>,
+    v_pos: &Poly<F>,
+    g: usize,
+) -> Divisor<F> {
     let g_i32 = g as i32;
 
     if d.n > g_i32 - d.u.deg() {
@@ -315,7 +346,7 @@ pub fn adjust_pos<F: Field>(mut d: Divisor<F>, _f: &Poly<F>, h: &Poly<F>, v_pos:
         let tv = &(&d.v + &t) - &r;
         let vh = &d.v + h;
         let vht = &vh + &tv;
-        d.w = d.w - q * vht;
+        d.w -= q * vht;
         d.v = tv;
 
         while d.n < -1 {
@@ -349,14 +380,27 @@ pub fn adjust_pos<F: Field>(mut d: Divisor<F>, _f: &Poly<F>, h: &Poly<F>, v_pos:
 }
 
 /// `Add_SPLIT_POS`.
-pub fn add_pos<F: Field>(d1: &Divisor<F>, d2: &Divisor<F>, f: &Poly<F>, h: &Poly<F>, v_pos: &Poly<F>, g: usize) -> Divisor<F> {
+pub fn add_pos<F: Field>(
+    d1: &Divisor<F>,
+    d2: &Divisor<F>,
+    f: &Poly<F>,
+    h: &Poly<F>,
+    v_pos: &Poly<F>,
+    g: usize,
+) -> Divisor<F> {
     let d = compose_add(d1, d2, h, g);
     let d = finish(d, h, v_pos, g, true);
     adjust_pos(d, f, h, v_pos, g)
 }
 
 /// `Double_SPLIT_POS`.
-pub fn double_pos<F: Field>(d1: &Divisor<F>, f: &Poly<F>, h: &Poly<F>, v_pos: &Poly<F>, g: usize) -> Divisor<F> {
+pub fn double_pos<F: Field>(
+    d1: &Divisor<F>,
+    f: &Poly<F>,
+    h: &Poly<F>,
+    v_pos: &Poly<F>,
+    g: usize,
+) -> Divisor<F> {
     let d = compose_double(d1, h, g);
     let d = finish(d, h, v_pos, g, true);
     adjust_pos(d, f, h, v_pos, g)
@@ -450,7 +494,7 @@ mod tests {
             let t = &v_neg - &vpl;
             let (q, r) = t.div_rem(&d.u);
             let tv = &d.v + &t - r;
-            d.w = d.w - q * (&d.v + &tv);
+            d.w -= q * (&d.v + &tv);
             d.v = tv;
             let doubled = double_neg(&d, &f, &h, &v_neg, g);
             assert!(doubled.u.deg() <= g as i32);

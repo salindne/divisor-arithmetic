@@ -36,7 +36,12 @@ fn derivative<F: Field>(p: &Poly<F>) -> Poly<F> {
 fn random_curve_arb<F: Field, R: Rng>(rng: &mut R) -> CurveConstants<F> {
     let two = F::one() + F::one();
     loop {
-        let h = [F::random(rng), F::random(rng), F::random(rng), F::random(rng)];
+        let h = [
+            F::random(rng),
+            F::random(rng),
+            F::random(rng),
+            F::random(rng),
+        ];
         let y3 = F::random(rng);
         let c3 = y3.double() + h[3]; // 2y3 + h3 must be nonzero (distinct ∞ points)
         if c3.is_zero() {
@@ -47,8 +52,13 @@ fn random_curve_arb<F: Field, R: Rng>(rng: &mut R) -> CurveConstants<F> {
             continue;
         }
         let f = [
-            F::random(rng), F::random(rng), F::random(rng), F::random(rng),
-            F::random(rng), F::random(rng), f6,
+            F::random(rng),
+            F::random(rng),
+            F::random(rng),
+            F::random(rng),
+            F::random(rng),
+            F::random(rng),
+            f6,
         ];
         let cc = precompute(f, h, y3);
 
@@ -68,7 +78,11 @@ fn random_curve_arb<F: Field, R: Rng>(rng: &mut R) -> CurveConstants<F> {
 }
 
 /// Convert explicit coords → generic divisor with `w = (f − v(v+h))/u`.
-fn to_generic_arb<F: Field>(d: &DivisorCoords<F>, cc: &CurveConstants<F>, basis: &Poly<F>) -> Divisor<F> {
+fn to_generic_arb<F: Field>(
+    d: &DivisorCoords<F>,
+    cc: &CurveConstants<F>,
+    basis: &Poly<F>,
+) -> Divisor<F> {
     let f = cc.f_poly();
     let h = cc.h_poly();
     let u = match d.degree() {
@@ -167,7 +181,12 @@ fn check_double_neg_arb<F: Field + std::fmt::Display>(d: &Divisor<F>, cc: &Curve
     let vn = cc.vn();
     let got = double_neg(&from_generic(d), cc);
     let expected = from_generic(&split::double_neg(d, &f, &h, &vn, G));
-    assert_eq!(got, expected, "arb double_neg mismatch for {:?}", from_generic(d));
+    assert_eq!(
+        got,
+        expected,
+        "arb double_neg mismatch for {:?}",
+        from_generic(d)
+    );
 }
 
 fn check_add_neg_arb<F: Field + std::fmt::Display>(
@@ -181,7 +200,8 @@ fn check_add_neg_arb<F: Field + std::fmt::Display>(
     let got = add_neg(&from_generic(d1), &from_generic(d2), cc);
     let expected = from_generic(&split::add_neg(d1, d2, &f, &h, &vn, G));
     assert_eq!(
-        got, expected,
+        got,
+        expected,
         "arb add_neg mismatch for {:?} + {:?}",
         from_generic(d1),
         from_generic(d2)
@@ -196,7 +216,11 @@ fn dbl_neg_arb<const P: u64>(seed: u64, curves: usize, divisors: usize) {
         for _ in 0..divisors {
             let d = random_valid_neg_arb(&cc, &mut rng);
             // round-trip incl. n
-            assert_eq!(to_generic_arb(&from_generic(&d), &cc, &vn), d, "arb neg round-trip");
+            assert_eq!(
+                to_generic_arb(&from_generic(&d), &cc, &vn),
+                d,
+                "arb neg round-trip"
+            );
             check_double_neg_arb(&d, &cc);
         }
         for n in 0..=2 {
@@ -236,7 +260,11 @@ fn arb_dbl_neg_branch_coverage() {
     let labels: Vec<String> = (0..=17).map(|i| format!("ADBL{i:02}")).collect();
     let refs: Vec<&str> = labels.iter().map(|s| s.as_str()).collect();
     let missing = super::coverage::missing(&refs);
-    assert!(missing.is_empty(), "arb-neg DBL branches never exercised: {:?}", missing);
+    assert!(
+        missing.is_empty(),
+        "arb-neg DBL branches never exercised: {:?}",
+        missing
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -288,7 +316,11 @@ fn arb_add_neg_branch_coverage() {
     let labels: Vec<String> = (0..=58).map(|i| format!("AADD{i:02}")).collect();
     let refs: Vec<&str> = labels.iter().map(|s| s.as_str()).collect();
     let missing = super::coverage::missing(&refs);
-    assert!(missing.is_empty(), "arb-neg ADD branches never exercised: {:?}", missing);
+    assert!(
+        missing.is_empty(),
+        "arb-neg ADD branches never exercised: {:?}",
+        missing
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -357,7 +389,12 @@ fn check_double_pos_arb<F: Field + std::fmt::Display>(d: &Divisor<F>, cc: &Curve
     let vpl = cc.vpl();
     let got = double_pos(&from_generic(d), cc);
     let expected = from_generic(&split::double_pos(d, &f, &h, &vpl, G));
-    assert_eq!(got, expected, "arb double_pos mismatch for {:?}", from_generic(d));
+    assert_eq!(
+        got,
+        expected,
+        "arb double_pos mismatch for {:?}",
+        from_generic(d)
+    );
 }
 
 fn check_add_pos_arb<F: Field + std::fmt::Display>(
@@ -371,7 +408,8 @@ fn check_add_pos_arb<F: Field + std::fmt::Display>(
     let got = add_pos(&from_generic(d1), &from_generic(d2), cc);
     let expected = from_generic(&split::add_pos(d1, d2, &f, &h, &vpl, G));
     assert_eq!(
-        got, expected,
+        got,
+        expected,
         "arb add_pos mismatch for {:?} + {:?}",
         from_generic(d1),
         from_generic(d2)
@@ -386,7 +424,11 @@ fn dbl_pos_arb<const P: u64>(seed: u64, curves: usize, divisors: usize) {
         for _ in 0..divisors {
             let d = random_valid_pos_arb(&cc, &mut rng);
             // round-trip incl. n
-            assert_eq!(to_generic_arb(&from_generic(&d), &cc, &vpl), d, "arb pos round-trip");
+            assert_eq!(
+                to_generic_arb(&from_generic(&d), &cc, &vpl),
+                d,
+                "arb pos round-trip"
+            );
             check_double_pos_arb(&d, &cc);
         }
         for n in 0..=2 {
@@ -464,5 +506,9 @@ fn arb_pos_branch_coverage() {
     labels.extend((0..=58).map(|i| format!("APADD{i:02}")));
     let refs: Vec<&str> = labels.iter().map(|s| s.as_str()).collect();
     let missing = super::coverage::missing(&refs);
-    assert!(missing.is_empty(), "arb-pos branches never exercised: {:?}", missing);
+    assert!(
+        missing.is_empty(),
+        "arb-pos branches never exercised: {:?}",
+        missing
+    );
 }

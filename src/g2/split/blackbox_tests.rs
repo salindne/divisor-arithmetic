@@ -90,7 +90,13 @@ fn check_double_neg<F: Field + std::fmt::Display>(
     let vn = cc.vn();
     let coords = from_generic(d);
     let got = double_neg(&coords, cc);
-    let expected = from_generic(&split::double_neg(d, &f, &crate::poly::Poly::zero(), &vn, G));
+    let expected = from_generic(&split::double_neg(
+        d,
+        &f,
+        &crate::poly::Poly::zero(),
+        &vn,
+        G,
+    ));
     assert_eq!(got, expected, "double_neg mismatch for input {:?}", coords);
 }
 
@@ -149,7 +155,11 @@ fn dbl_branch_coverage() {
     dbl_crosscheck::<31>(204, 20, 120);
     let expected: Vec<&'static str> = (0..=17).map(|i| LABELS[i]).collect();
     let missing = super::coverage::missing(&expected);
-    assert!(missing.is_empty(), "DBL branches never exercised: {:?}", missing);
+    assert!(
+        missing.is_empty(),
+        "DBL branches never exercised: {:?}",
+        missing
+    );
 }
 
 const LABELS: [&str; 18] = [
@@ -168,8 +178,19 @@ fn check_double_pos<F: Field + std::fmt::Display>(
     let f = cc.f_poly();
     let vpl = cc.vpl();
     let got = double_pos(&from_generic(d), cc);
-    let expected = from_generic(&split::double_pos(d, &f, &crate::poly::Poly::zero(), &vpl, G));
-    assert_eq!(got, expected, "double_pos mismatch for {:?}", from_generic(d));
+    let expected = from_generic(&split::double_pos(
+        d,
+        &f,
+        &crate::poly::Poly::zero(),
+        &vpl,
+        G,
+    ));
+    assert_eq!(
+        got,
+        expected,
+        "double_pos mismatch for {:?}",
+        from_generic(d)
+    );
 }
 
 fn dbl_crosscheck_pos<const P: u64>(seed: u64, curves: usize, divisors: usize) {
@@ -181,7 +202,11 @@ fn dbl_crosscheck_pos<const P: u64>(seed: u64, curves: usize, divisors: usize) {
             let d = random_valid_pos(&cc, &mut rng);
             assert_well_formed(&d, &cc);
             // round-trip incl. n in the positive basis
-            assert_eq!(to_generic(&from_generic(&d), &cc, &vpl), d, "pos round-trip changed divisor");
+            assert_eq!(
+                to_generic(&from_generic(&d), &cc, &vpl),
+                d,
+                "pos round-trip changed divisor"
+            );
             check_double_pos(&d, &cc);
         }
         for n in 0..=2 {
@@ -219,8 +244,21 @@ fn check_add_pos<F: Field + std::fmt::Display>(
     let f = cc.f_poly();
     let vpl = cc.vpl();
     let got = add_pos(&from_generic(d1), &from_generic(d2), cc);
-    let expected = from_generic(&split::add_pos(d1, d2, &f, &crate::poly::Poly::zero(), &vpl, G));
-    assert_eq!(got, expected, "add_pos mismatch:\n  d1={:?}\n  d2={:?}", from_generic(d1), from_generic(d2));
+    let expected = from_generic(&split::add_pos(
+        d1,
+        d2,
+        &f,
+        &crate::poly::Poly::zero(),
+        &vpl,
+        G,
+    ));
+    assert_eq!(
+        got,
+        expected,
+        "add_pos mismatch:\n  d1={:?}\n  d2={:?}",
+        from_generic(d1),
+        from_generic(d2)
+    );
 }
 
 /// Faithful port of the Magma pos random tester: random pos divisor pairs.
@@ -267,7 +305,14 @@ fn check_add_neg<F: Field + std::fmt::Display>(
     let f = cc.f_poly();
     let vn = cc.vn();
     let got = add_neg(&from_generic(d1), &from_generic(d2), cc);
-    let expected = from_generic(&split::add_neg(d1, d2, &f, &crate::poly::Poly::zero(), &vn, G));
+    let expected = from_generic(&split::add_neg(
+        d1,
+        d2,
+        &f,
+        &crate::poly::Poly::zero(),
+        &vn,
+        G,
+    ));
     assert_eq!(
         got,
         expected,

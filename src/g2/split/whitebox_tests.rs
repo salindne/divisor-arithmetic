@@ -43,12 +43,25 @@ fn run_cases<const P: u64>(cases: &[Case]) {
 
         if c.op == b'D' {
             let got = double_neg(&from_generic(&d1), &cc);
-            let expected = from_generic(&split::double_neg(&d1, &f, &crate::poly::Poly::zero(), &vn, G));
+            let expected = from_generic(&split::double_neg(
+                &d1,
+                &f,
+                &crate::poly::Poly::zero(),
+                &vn,
+                G,
+            ));
             assert_eq!(got, expected, "GF({P}) whitebox DBL case #{i}");
         } else {
             let d2 = build_divisor::<P>(&cc, c.u2, c.v2, c.n2);
             let got = add_neg(&from_generic(&d1), &from_generic(&d2), &cc);
-            let expected = from_generic(&split::add_neg(&d1, &d2, &f, &crate::poly::Poly::zero(), &vn, G));
+            let expected = from_generic(&split::add_neg(
+                &d1,
+                &d2,
+                &f,
+                &crate::poly::Poly::zero(),
+                &vn,
+                G,
+            ));
             assert_eq!(got, expected, "GF({P}) whitebox ADD case #{i}");
         }
     }
@@ -69,12 +82,25 @@ fn run_cases_pos<const P: u64>(cases: &[Case]) {
         let d1 = build_divisor::<P>(&cc, c.u1, c.v1, c.n1);
         if c.op == b'D' {
             let got = double_pos(&from_generic(&d1), &cc);
-            let expected = from_generic(&split::double_pos(&d1, &f, &crate::poly::Poly::zero(), &vpl, G));
+            let expected = from_generic(&split::double_pos(
+                &d1,
+                &f,
+                &crate::poly::Poly::zero(),
+                &vpl,
+                G,
+            ));
             assert_eq!(got, expected, "GF({P}) pos whitebox DBL case #{i}");
         } else {
             let d2 = build_divisor::<P>(&cc, c.u2, c.v2, c.n2);
             let got = add_pos(&from_generic(&d1), &from_generic(&d2), &cc);
-            let expected = from_generic(&split::add_pos(&d1, &d2, &f, &crate::poly::Poly::zero(), &vpl, G));
+            let expected = from_generic(&split::add_pos(
+                &d1,
+                &d2,
+                &f,
+                &crate::poly::Poly::zero(),
+                &vpl,
+                G,
+            ));
             assert_eq!(got, expected, "GF({P}) pos whitebox ADD case #{i}");
         }
     }
@@ -123,13 +149,19 @@ fn branch_coverage() {
                 ($P:literal) => {{
                     let cc = random_curve::<PrimeField<$P>, _>(&mut rng);
                     for _ in 0..60 {
-                        let (a, b) = (random_valid_neg(&cc, &mut rng), random_valid_neg(&cc, &mut rng));
+                        let (a, b) = (
+                            random_valid_neg(&cc, &mut rng),
+                            random_valid_neg(&cc, &mut rng),
+                        );
                         double_neg(&from_generic(&a), &cc);
                         let (ca, cb) = (from_generic(&a), from_generic(&b));
                         if ca != cb {
                             add_neg(&ca, &cb, &cc);
                         }
-                        let (a, b) = (random_valid_pos(&cc, &mut rng), random_valid_pos(&cc, &mut rng));
+                        let (a, b) = (
+                            random_valid_pos(&cc, &mut rng),
+                            random_valid_pos(&cc, &mut rng),
+                        );
                         double_pos(&from_generic(&a), &cc);
                         let (ca, cb) = (from_generic(&a), from_generic(&b));
                         if ca != cb {
@@ -153,5 +185,9 @@ fn branch_coverage() {
     }
     let refs: Vec<&str> = all.iter().map(|s| s.as_str()).collect();
     let missing = super::coverage::missing(&refs);
-    assert!(missing.is_empty(), "formula branches never exercised: {:?}", missing);
+    assert!(
+        missing.is_empty(),
+        "formula branches never exercised: {:?}",
+        missing
+    );
 }

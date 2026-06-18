@@ -15,9 +15,9 @@
 //! by cross-checking against the generic Cantor reference in
 //! [`crate::generic::split`].
 
-pub mod not_char2;
 pub mod arbitrary;
 pub mod char2;
+pub mod not_char2;
 
 /// Record that a named formula branch (matching the Magma `DEBUG` labels, e.g.
 /// `"DBL03"`) was taken. Compiles to a no-op outside tests.
@@ -49,19 +49,23 @@ pub(crate) mod coverage {
     /// Labels (from `expected`) that have not been hit yet.
     pub fn missing<'a>(expected: &[&'a str]) -> Vec<&'a str> {
         let hits = store().lock().unwrap();
-        expected.iter().copied().filter(|l| !hits.contains(*l)).collect()
+        expected
+            .iter()
+            .copied()
+            .filter(|l| !hits.contains(*l))
+            .collect()
     }
 }
 
 #[cfg(test)]
-mod test_support;
-#[cfg(test)]
 mod arb_tests;
 #[cfg(test)]
+mod blackbox_tests;
+#[cfg(test)]
 mod char2_tests;
+#[cfg(test)]
+mod test_support;
 #[cfg(test)]
 mod wb_vectors;
 #[cfg(test)]
 mod whitebox_tests;
-#[cfg(test)]
-mod blackbox_tests;

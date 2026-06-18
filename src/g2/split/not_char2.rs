@@ -20,6 +20,9 @@
 //!
 //! Based on: Sebastian Lindner, 2020 (Magma `*_splitG2_{UTL,ADD,DBL}.mag`).
 
+// Explicit divisor formulas take the divisor's coordinates as separate scalars.
+#![allow(clippy::too_many_arguments)]
+
 use crate::field::Field;
 use crate::poly::Poly;
 
@@ -101,7 +104,10 @@ impl<F: Field> CurveConstants<F> {
 /// characteristic-2 field (the not-char-2 formulas divide by 2).
 pub fn precompute<F: Field>(f0: F, f1: F, f2: F, f3: F, f4: F) -> CurveConstants<F> {
     let two = F::one() + F::one();
-    assert!(!two.is_zero(), "not_char2 split model requires characteristic ≠ 2");
+    assert!(
+        !two.is_zero(),
+        "not_char2 split model requires characteristic ≠ 2"
+    );
     let half = two.inv();
 
     // Positive basis Vpl = x³ + y1 x + y0 with y1 = f4/2, y0 = f3/2.
@@ -219,17 +225,38 @@ impl<F: Field> DivisorCoords<F> {
 
     /// A degree-2 divisor `<x² + u1·x + u0, v1·x + v0, n>`.
     pub fn deg2(u1: F, u0: F, v1: F, v0: F, n: i32) -> Self {
-        Self { u2: F::one(), u1, u0, v1, v0, n }
+        Self {
+            u2: F::one(),
+            u1,
+            u0,
+            v1,
+            v0,
+            n,
+        }
     }
 
     /// A degree-1 divisor `<x + u0, v1·x + v0, n>` (v1 holds the basis x-coeff).
     pub fn deg1(u0: F, v1: F, v0: F, n: i32) -> Self {
-        Self { u2: F::zero(), u1: F::one(), u0, v1, v0, n }
+        Self {
+            u2: F::zero(),
+            u1: F::one(),
+            u0,
+            v1,
+            v0,
+            n,
+        }
     }
 
     /// A degree-0 divisor `<1, v1·x + v0, n>` (v1,v0 hold the basis coeffs).
     pub fn deg0(v1: F, v0: F, n: i32) -> Self {
-        Self { u2: F::zero(), u1: F::zero(), u0: F::one(), v1, v0, n }
+        Self {
+            u2: F::zero(),
+            u1: F::zero(),
+            u0: F::one(),
+            v1,
+            v0,
+            n,
+        }
     }
 }
 
@@ -536,7 +563,13 @@ fn deg01_add_dwn_neg<F: Field>(u0: F, v0: F, cc: &CurveConstants<F>) -> DivisorC
 
 /// `<1, V, 0>` + degree-2 divisor. (`Deg02ADDUP`)
 #[inline]
-fn deg02_add_up_neg<F: Field>(u0: F, u1: F, v0: F, v1: F, cc: &CurveConstants<F>) -> DivisorCoords<F> {
+fn deg02_add_up_neg<F: Field>(
+    u0: F,
+    u1: F,
+    v0: F,
+    v1: F,
+    cc: &CurveConstants<F>,
+) -> DivisorCoords<F> {
     let (yn0, yn1, f4, f2) = (cc.yn0, cc.yn1, cc.f4, cc.f2);
     let z1 = v1 - yn1;
     let z0 = v0 - yn0;
@@ -565,7 +598,13 @@ fn deg02_add_up_neg<F: Field>(u0: F, u1: F, v0: F, v1: F, cc: &CurveConstants<F>
 
 /// `<1, V, 2>` + degree-2 divisor. (`Deg02ADDDWN`)
 #[inline]
-fn deg02_add_dwn_neg<F: Field>(u0: F, u1: F, v0: F, v1: F, cc: &CurveConstants<F>) -> DivisorCoords<F> {
+fn deg02_add_dwn_neg<F: Field>(
+    u0: F,
+    u1: F,
+    v0: F,
+    v1: F,
+    cc: &CurveConstants<F>,
+) -> DivisorCoords<F> {
     let (f2, yn0, yn1) = (cc.f2, cc.yn0, cc.yn1);
     let t1 = u1.double();
     let t2 = u0 - u1.square();
@@ -593,7 +632,13 @@ fn deg02_add_dwn_neg<F: Field>(u0: F, u1: F, v0: F, v1: F, cc: &CurveConstants<F
 
 /// Two degree-1 divisors with `n + np = 1`. (`Deg1ADD`)
 #[inline]
-fn deg1_add_neg<F: Field>(u0: F, v0: F, up0: F, vp0: F, cc: &CurveConstants<F>) -> DivisorCoords<F> {
+fn deg1_add_neg<F: Field>(
+    u0: F,
+    v0: F,
+    up0: F,
+    vp0: F,
+    cc: &CurveConstants<F>,
+) -> DivisorCoords<F> {
     let (yn0, yn1, f4, f1, d1) = (cc.yn0, cc.yn1, cc.f4, cc.f1, cc.d1);
     let d = u0 - up0;
     if d.is_zero() {
@@ -623,7 +668,13 @@ fn deg1_add_neg<F: Field>(u0: F, v0: F, up0: F, vp0: F, cc: &CurveConstants<F>) 
 
 /// Two degree-1 divisors, both `n = 0` (UP). (`Deg1ADDUP`)
 #[inline]
-fn deg1_add_up_neg<F: Field>(u0: F, v0: F, up0: F, vp0: F, cc: &CurveConstants<F>) -> DivisorCoords<F> {
+fn deg1_add_up_neg<F: Field>(
+    u0: F,
+    v0: F,
+    up0: F,
+    vp0: F,
+    cc: &CurveConstants<F>,
+) -> DivisorCoords<F> {
     let (yn0, yn1, d8, f4) = (cc.yn0, cc.yn1, cc.half_d1, cc.f4);
     let d = u0 - up0;
     if d.is_zero() {
@@ -659,7 +710,13 @@ fn deg1_add_up_neg<F: Field>(u0: F, v0: F, up0: F, vp0: F, cc: &CurveConstants<F
 
 /// Two degree-1 divisors, both `n = 1` (DWN). (`Deg1ADDDWN`)
 #[inline]
-fn deg1_add_dwn_neg<F: Field>(u0: F, v0: F, up0: F, vp0: F, cc: &CurveConstants<F>) -> DivisorCoords<F> {
+fn deg1_add_dwn_neg<F: Field>(
+    u0: F,
+    v0: F,
+    up0: F,
+    vp0: F,
+    cc: &CurveConstants<F>,
+) -> DivisorCoords<F> {
     let (yn0, yn1, d8, f4) = (cc.yn0, cc.yn1, cc.half_d1, cc.f4);
     let d = u0 - up0;
     if d.is_zero() {
@@ -696,7 +753,13 @@ fn deg1_add_dwn_neg<F: Field>(u0: F, v0: F, up0: F, vp0: F, cc: &CurveConstants<
 /// degree-1 `<x+u0,v0,1>` + degree-2 (UP). (`Deg12ADDUP`)
 #[inline]
 fn deg12_add_up_neg<F: Field>(
-    u0: F, v0: F, up0: F, up1: F, vp0: F, vp1: F, cc: &CurveConstants<F>,
+    u0: F,
+    v0: F,
+    up0: F,
+    up1: F,
+    vp0: F,
+    vp1: F,
+    cc: &CurveConstants<F>,
 ) -> DivisorCoords<F> {
     let (f2, yn0, yn1) = (cc.f2, cc.yn0, cc.yn1);
     let t0 = u0 * up1;
@@ -772,7 +835,13 @@ fn deg12_add_up_neg<F: Field>(
 /// degree-1 `<x+u0,v0,0>` + degree-2 (DWN). (`Deg12ADD`)
 #[inline]
 fn deg12_add_neg<F: Field>(
-    u0: F, v0: F, up0: F, up1: F, vp0: F, vp1: F, cc: &CurveConstants<F>,
+    u0: F,
+    v0: F,
+    up0: F,
+    up1: F,
+    vp0: F,
+    vp1: F,
+    cc: &CurveConstants<F>,
 ) -> DivisorCoords<F> {
     let (yn0, yn1, f2) = (cc.yn0, cc.yn1, cc.f2);
     // vp := -V - h - ((-V-h - vp) mod up)
@@ -849,7 +918,15 @@ fn deg12_add_neg<F: Field>(
 /// Two degree-2 divisors. (`Deg2ADD`)
 #[inline]
 fn deg2_add_neg<F: Field>(
-    u0: F, u1: F, v0: F, v1: F, up0: F, up1: F, vp0: F, vp1: F, cc: &CurveConstants<F>,
+    u0: F,
+    u1: F,
+    v0: F,
+    v1: F,
+    up0: F,
+    up1: F,
+    vp0: F,
+    vp1: F,
+    cc: &CurveConstants<F>,
 ) -> DivisorCoords<F> {
     let (yn0, yn1, f2) = (cc.yn0, cc.yn1, cc.f2);
     let m3 = up1 - u1;
@@ -1322,11 +1399,25 @@ pub fn double_pos<F: Field>(d: &DivisorCoords<F>, cc: &CurveConstants<F>) -> Div
             } else if d.n == 0 {
                 super::branch("PDBL16");
                 // <adu, Vpl, 2 − audeg>
-                DivisorCoords { u2: cc.au2, u1: cc.au1, u0: cc.au0, v1: cc.y1, v0: cc.y0, n: 2 - cc.audeg as i32 }
+                DivisorCoords {
+                    u2: cc.au2,
+                    u1: cc.au1,
+                    u0: cc.au0,
+                    v1: cc.y1,
+                    v0: cc.y0,
+                    n: 2 - cc.audeg as i32,
+                }
             } else {
                 super::branch("PDBL17");
                 // <adu, adv_pos, 0>
-                DivisorCoords { u2: cc.au2, u1: cc.au1, u0: cc.au0, v1: cc.adv1_pos, v0: cc.adv0_pos, n: 0 }
+                DivisorCoords {
+                    u2: cc.au2,
+                    u1: cc.au1,
+                    u0: cc.au0,
+                    v1: cc.adv1_pos,
+                    v0: cc.adv0_pos,
+                    n: 0,
+                }
             }
         }
     }
@@ -1393,7 +1484,13 @@ fn deg01_add_up_pos<F: Field>(u0: F, v0: F, cc: &CurveConstants<F>) -> DivisorCo
 
 /// `<1, V, 2>` + degree-2 divisor. (`Deg02ADDDWN`, pos)
 #[inline]
-fn deg02_add_dwn_pos<F: Field>(u0: F, u1: F, v0: F, v1: F, cc: &CurveConstants<F>) -> DivisorCoords<F> {
+fn deg02_add_dwn_pos<F: Field>(
+    u0: F,
+    u1: F,
+    v0: F,
+    v1: F,
+    cc: &CurveConstants<F>,
+) -> DivisorCoords<F> {
     let (y0, y1, f4) = (cc.y0, cc.y1, cc.f4);
     let d4 = cc.f2 * cc.half;
     let z0 = y0 - v0;
@@ -1423,7 +1520,13 @@ fn deg02_add_dwn_pos<F: Field>(u0: F, u1: F, v0: F, v1: F, cc: &CurveConstants<F
 
 /// `<1, V, 0>` + degree-2 divisor. (`Deg02ADDUP`, pos)
 #[inline]
-fn deg02_add_up_pos<F: Field>(u0: F, u1: F, v0: F, v1: F, cc: &CurveConstants<F>) -> DivisorCoords<F> {
+fn deg02_add_up_pos<F: Field>(
+    u0: F,
+    u1: F,
+    v0: F,
+    v1: F,
+    cc: &CurveConstants<F>,
+) -> DivisorCoords<F> {
     let (y0, y1) = (cc.y0, cc.y1);
     let d4 = cc.f2 * cc.half;
     let t1 = u1.double();
@@ -1451,7 +1554,13 @@ fn deg02_add_up_pos<F: Field>(u0: F, u1: F, v0: F, v1: F, cc: &CurveConstants<F>
 
 /// Two degree-1 divisors with `n + np = 1`. (`Deg1ADD`, pos)
 #[inline]
-fn deg1_add_pos<F: Field>(u0: F, v0: F, up0: F, vp0: F, cc: &CurveConstants<F>) -> DivisorCoords<F> {
+fn deg1_add_pos<F: Field>(
+    u0: F,
+    v0: F,
+    up0: F,
+    vp0: F,
+    cc: &CurveConstants<F>,
+) -> DivisorCoords<F> {
     let (y0, y1, d1, f1, f4) = (cc.y0, cc.y1, cc.d1, cc.f1, cc.f4);
     let d = u0 - up0;
     if d.is_zero() {
@@ -1481,7 +1590,13 @@ fn deg1_add_pos<F: Field>(u0: F, v0: F, up0: F, vp0: F, cc: &CurveConstants<F>) 
 
 /// Two degree-1 divisors, both `n = 1` (DWN). (`Deg1ADDDWN`, pos)
 #[inline]
-fn deg1_add_dwn_pos<F: Field>(u0: F, v0: F, up0: F, vp0: F, cc: &CurveConstants<F>) -> DivisorCoords<F> {
+fn deg1_add_dwn_pos<F: Field>(
+    u0: F,
+    v0: F,
+    up0: F,
+    vp0: F,
+    cc: &CurveConstants<F>,
+) -> DivisorCoords<F> {
     let (y0, y1, d2, f4) = (cc.y0, cc.y1, cc.half_d1, cc.f4);
     let d = u0 - up0;
     if d.is_zero() {
@@ -1517,7 +1632,13 @@ fn deg1_add_dwn_pos<F: Field>(u0: F, v0: F, up0: F, vp0: F, cc: &CurveConstants<
 
 /// Two degree-1 divisors, both `n = 0` (UP). (`Deg1ADDUP`, pos)
 #[inline]
-fn deg1_add_up_pos<F: Field>(u0: F, v0: F, up0: F, vp0: F, cc: &CurveConstants<F>) -> DivisorCoords<F> {
+fn deg1_add_up_pos<F: Field>(
+    u0: F,
+    v0: F,
+    up0: F,
+    vp0: F,
+    cc: &CurveConstants<F>,
+) -> DivisorCoords<F> {
     let (y0, y1, d2, f4) = (cc.y0, cc.y1, cc.half_d1, cc.f4);
     let d = u0 - up0;
     if d.is_zero() {
@@ -1554,7 +1675,13 @@ fn deg1_add_up_pos<F: Field>(u0: F, v0: F, up0: F, vp0: F, cc: &CurveConstants<F
 /// degree-1 `<x+u0,v0,1>` + degree-2 (DWN). (`Deg12ADD`, pos)
 #[inline]
 fn deg12_add_pos<F: Field>(
-    u0: F, v0: F, up0: F, up1: F, vp0: F, vp1: F, cc: &CurveConstants<F>,
+    u0: F,
+    v0: F,
+    up0: F,
+    up1: F,
+    vp0: F,
+    vp1: F,
+    cc: &CurveConstants<F>,
 ) -> DivisorCoords<F> {
     let (f2, y0, y1) = (cc.f2, cc.y0, cc.y1);
     let t0 = u0 * up1;
@@ -1629,7 +1756,13 @@ fn deg12_add_pos<F: Field>(
 /// degree-1 `<x+u0,v0,0>` + degree-2 (UP). (`Deg12ADDUP`, pos)
 #[inline]
 fn deg12_add_up_pos<F: Field>(
-    u0: F, v0: F, up0: F, up1: F, vp0: F, vp1: F, cc: &CurveConstants<F>,
+    u0: F,
+    v0: F,
+    up0: F,
+    up1: F,
+    vp0: F,
+    vp1: F,
+    cc: &CurveConstants<F>,
 ) -> DivisorCoords<F> {
     let (f2, y0, y1) = (cc.f2, cc.y0, cc.y1);
     // vp := -V - h - ((-V-h - vp) mod up)
@@ -1706,7 +1839,15 @@ fn deg12_add_up_pos<F: Field>(
 /// Two degree-2 divisors. (`Deg2ADD`, pos)
 #[inline]
 fn deg2_add_pos<F: Field>(
-    u0: F, u1: F, v0: F, v1: F, up0: F, up1: F, vp0: F, vp1: F, cc: &CurveConstants<F>,
+    u0: F,
+    u1: F,
+    v0: F,
+    v1: F,
+    up0: F,
+    up1: F,
+    vp0: F,
+    vp1: F,
+    cc: &CurveConstants<F>,
 ) -> DivisorCoords<F> {
     let (f2, y0, y1) = (cc.f2, cc.y0, cc.y1);
     let m3 = up1 - u1;

@@ -232,7 +232,14 @@ fn build_deg2<F: Field>(
         let w = (f - &(&vhat * &(&vhat + h))).exact_div(&u);
         gsplit::Divisor::new(u, vhat, w, 0)
     };
-    gsplit::add_neg(&deg1(pts[0].0, pts[0].1), &deg1(pts[1].0, pts[1].1), f, h, vn, 2)
+    gsplit::add_neg(
+        &deg1(pts[0].0, pts[0].1),
+        &deg1(pts[1].0, pts[1].1),
+        f,
+        h,
+        vn,
+        2,
+    )
 }
 
 // ---- nch2 split (h = 0) ----
@@ -240,8 +247,11 @@ fn bench_split_nch2<F: Field>(c: &mut Criterion, name: &str) {
     let mut rng = rand::thread_rng();
     let (cc, d1, d2) = loop {
         let cc = snch2::precompute(
-            F::random(&mut rng), F::random(&mut rng), F::random(&mut rng),
-            F::random(&mut rng), F::random(&mut rng),
+            F::random(&mut rng),
+            F::random(&mut rng),
+            F::random(&mut rng),
+            F::random(&mut rng),
+            F::random(&mut rng),
         );
         let (f, vn) = (cc.f_poly(), cc.vn());
         let h = Poly::zero();
@@ -261,19 +271,29 @@ fn bench_split_nch2<F: Field>(c: &mut Criterion, name: &str) {
         let g1 = build_deg2(&f, &h, &vn, &pts[0..2]);
         let g2 = build_deg2(&f, &h, &vn, &pts[2..4]);
         let to = |d: &gsplit::Divisor<F>| match d.u.deg() {
-            2 => snch2::DivisorCoords::deg2(d.u.coeff(1), d.u.coeff(0), d.v.coeff(1), d.v.coeff(0), d.n),
+            2 => snch2::DivisorCoords::deg2(
+                d.u.coeff(1),
+                d.u.coeff(0),
+                d.v.coeff(1),
+                d.v.coeff(0),
+                d.n,
+            ),
             _ => snch2::DivisorCoords::deg1(d.u.coeff(0), d.v.coeff(1), d.v.coeff(0), d.n),
         };
         if g1.u.deg() == 2 && g2.u.deg() == 2 {
             break (cc, to(&g1), to(&g2));
         }
     };
-    c.bench_with_input(BenchmarkId::new("split_nch2_add", name), &(d1, d2, cc), |b, (d1, d2, cc)| {
-        b.iter(|| snch2::add_neg(black_box(d1), black_box(d2), black_box(cc)))
-    });
-    c.bench_with_input(BenchmarkId::new("split_nch2_dbl", name), &(d1, cc), |b, (d1, cc)| {
-        b.iter(|| snch2::double_neg(black_box(d1), black_box(cc)))
-    });
+    c.bench_with_input(
+        BenchmarkId::new("split_nch2_add", name),
+        &(d1, d2, cc),
+        |b, (d1, d2, cc)| b.iter(|| snch2::add_neg(black_box(d1), black_box(d2), black_box(cc))),
+    );
+    c.bench_with_input(
+        BenchmarkId::new("split_nch2_dbl", name),
+        &(d1, cc),
+        |b, (d1, cc)| b.iter(|| snch2::double_neg(black_box(d1), black_box(cc))),
+    );
 }
 
 // ---- arbitrary characteristic split (h != 0) ----
@@ -281,7 +301,12 @@ fn bench_split_arb<F: Field>(c: &mut Criterion, name: &str) {
     let mut rng = rand::thread_rng();
     let two_inv = (F::one() + F::one()).inv();
     let (cc, d1, d2) = loop {
-        let h = [F::random(&mut rng), F::random(&mut rng), F::random(&mut rng), F::random(&mut rng)];
+        let h = [
+            F::random(&mut rng),
+            F::random(&mut rng),
+            F::random(&mut rng),
+            F::random(&mut rng),
+        ];
         let y3 = F::random(&mut rng);
         let c3 = y3.double() + h[3];
         if c3.is_zero() {
@@ -292,8 +317,13 @@ fn bench_split_arb<F: Field>(c: &mut Criterion, name: &str) {
             continue;
         }
         let f = [
-            F::random(&mut rng), F::random(&mut rng), F::random(&mut rng),
-            F::random(&mut rng), F::random(&mut rng), F::random(&mut rng), f6,
+            F::random(&mut rng),
+            F::random(&mut rng),
+            F::random(&mut rng),
+            F::random(&mut rng),
+            F::random(&mut rng),
+            F::random(&mut rng),
+            f6,
         ];
         let cc = sarb::precompute(f, h, y3);
         let (fp, hp, vn) = (cc.f_poly(), cc.h_poly(), cc.vn());
@@ -314,19 +344,29 @@ fn bench_split_arb<F: Field>(c: &mut Criterion, name: &str) {
         let g1 = build_deg2(&fp, &hp, &vn, &pts[0..2]);
         let g2 = build_deg2(&fp, &hp, &vn, &pts[2..4]);
         let to = |d: &gsplit::Divisor<F>| match d.u.deg() {
-            2 => sarb::DivisorCoords::deg2(d.u.coeff(1), d.u.coeff(0), d.v.coeff(1), d.v.coeff(0), d.n),
+            2 => sarb::DivisorCoords::deg2(
+                d.u.coeff(1),
+                d.u.coeff(0),
+                d.v.coeff(1),
+                d.v.coeff(0),
+                d.n,
+            ),
             _ => sarb::DivisorCoords::deg1(d.u.coeff(0), d.v.coeff(1), d.v.coeff(0), d.n),
         };
         if g1.u.deg() == 2 && g2.u.deg() == 2 {
             break (cc, to(&g1), to(&g2));
         }
     };
-    c.bench_with_input(BenchmarkId::new("split_arb_add", name), &(d1, d2, cc), |b, (d1, d2, cc)| {
-        b.iter(|| sarb::add_neg(black_box(d1), black_box(d2), black_box(cc)))
-    });
-    c.bench_with_input(BenchmarkId::new("split_arb_dbl", name), &(d1, cc), |b, (d1, cc)| {
-        b.iter(|| sarb::double_neg(black_box(d1), black_box(cc)))
-    });
+    c.bench_with_input(
+        BenchmarkId::new("split_arb_add", name),
+        &(d1, d2, cc),
+        |b, (d1, d2, cc)| b.iter(|| sarb::add_neg(black_box(d1), black_box(d2), black_box(cc))),
+    );
+    c.bench_with_input(
+        BenchmarkId::new("split_arb_dbl", name),
+        &(d1, cc),
+        |b, (d1, cc)| b.iter(|| sarb::double_neg(black_box(d1), black_box(cc))),
+    );
 }
 
 // ---- characteristic 2 split ----
@@ -335,7 +375,9 @@ fn bench_split_char2<const K: usize>(c: &mut Criterion, name: &str) {
     let mut rng = rand::thread_rng();
     let solve = |cc: &sch2::CurveConstants<GF<K>>, a: GF<K>| -> Option<GF<K>> {
         let (ha, fa) = (cc.h_poly().eval(a), cc.f_poly().eval(a));
-        (0..(1u64 << K)).map(GF::<K>::new).find(|&b| b * b + ha * b == fa)
+        (0..(1u64 << K))
+            .map(GF::<K>::new)
+            .find(|&b| b * b + ha * b == fa)
     };
     let (cc, d1, d2) = loop {
         let beta = GF::<K>::random(&mut rng);
@@ -344,8 +386,13 @@ fn bench_split_char2<const K: usize>(c: &mut Criterion, name: &str) {
             continue;
         }
         let cc = sch2::precompute(
-            GF::<K>::random(&mut rng), GF::<K>::random(&mut rng), GF::<K>::random(&mut rng),
-            f6, GF::<K>::random(&mut rng), GF::<K>::random(&mut rng), beta,
+            GF::<K>::random(&mut rng),
+            GF::<K>::random(&mut rng),
+            GF::<K>::random(&mut rng),
+            f6,
+            GF::<K>::random(&mut rng),
+            GF::<K>::random(&mut rng),
+            beta,
         );
         let (fp, hp, vn) = (cc.f_poly(), cc.h_poly(), cc.vn());
         let mut pts = Vec::new();
@@ -364,19 +411,29 @@ fn bench_split_char2<const K: usize>(c: &mut Criterion, name: &str) {
         let g1 = build_deg2(&fp, &hp, &vn, &pts[0..2]);
         let g2 = build_deg2(&fp, &hp, &vn, &pts[2..4]);
         let to = |d: &gsplit::Divisor<GF<K>>| match d.u.deg() {
-            2 => sch2::DivisorCoords::deg2(d.u.coeff(1), d.u.coeff(0), d.v.coeff(1), d.v.coeff(0), d.n),
+            2 => sch2::DivisorCoords::deg2(
+                d.u.coeff(1),
+                d.u.coeff(0),
+                d.v.coeff(1),
+                d.v.coeff(0),
+                d.n,
+            ),
             _ => sch2::DivisorCoords::deg1(d.u.coeff(0), d.v.coeff(1), d.v.coeff(0), d.n),
         };
         if g1.u.deg() == 2 && g2.u.deg() == 2 {
             break (cc, to(&g1), to(&g2));
         }
     };
-    c.bench_with_input(BenchmarkId::new("split_char2_add", name), &(d1, d2, cc), |b, (d1, d2, cc)| {
-        b.iter(|| sch2::add_neg(black_box(d1), black_box(d2), black_box(cc)))
-    });
-    c.bench_with_input(BenchmarkId::new("split_char2_dbl", name), &(d1, cc), |b, (d1, cc)| {
-        b.iter(|| sch2::double_neg(black_box(d1), black_box(cc)))
-    });
+    c.bench_with_input(
+        BenchmarkId::new("split_char2_add", name),
+        &(d1, d2, cc),
+        |b, (d1, d2, cc)| b.iter(|| sch2::add_neg(black_box(d1), black_box(d2), black_box(cc))),
+    );
+    c.bench_with_input(
+        BenchmarkId::new("split_char2_dbl", name),
+        &(d1, cc),
+        |b, (d1, cc)| b.iter(|| sch2::double_neg(black_box(d1), black_box(cc))),
+    );
 }
 
 fn split_benchmarks(c: &mut Criterion) {
