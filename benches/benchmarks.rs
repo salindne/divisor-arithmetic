@@ -1,7 +1,7 @@
 //! Benchmarks for genus 2 ramified divisor arithmetic operations.
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
-use divisor_arithmetic::field::{BinaryExtField, Field, PrimeField};
+use divisor_arithmetic::field::{BinaryExtField, Field, MontgomeryField, PrimeField};
 use divisor_arithmetic::g2::ramified::{arbitrary, char2, not_char2};
 
 // =============================================================================
@@ -479,11 +479,14 @@ fn not_char2_benchmarks(c: &mut Criterion) {
     bench_not_char2_deg2_add::<PrimeField<65521>>(c, "F65521");
     // ~56-bit prime: matched-width comparison vs smalljac (built for 57-bit primes).
     bench_not_char2_deg2_add::<PrimeField<72057594037927931>>(c, "Fp56");
+    // Montgomery field at the same 56-bit prime (the "chase smalljac" field).
+    bench_not_char2_deg2_add::<MontgomeryField<72057594037927931>>(c, "Mont56");
 
     bench_not_char2_deg2_dbl::<PrimeField<7>>(c, "F7");
     bench_not_char2_deg2_dbl::<PrimeField<8191>>(c, "F8191");
     bench_not_char2_deg2_dbl::<PrimeField<65521>>(c, "F65521");
     bench_not_char2_deg2_dbl::<PrimeField<72057594037927931>>(c, "Fp56");
+    bench_not_char2_deg2_dbl::<MontgomeryField<72057594037927931>>(c, "Mont56");
 }
 
 fn arbitrary_benchmarks(c: &mut Criterion) {
@@ -507,6 +510,7 @@ fn char2_benchmarks(c: &mut Criterion) {
 fn field_benchmarks(c: &mut Criterion) {
     bench_field_ops::<PrimeField<65521>>(c, "F65521");
     bench_field_ops::<PrimeField<72057594037927931>>(c, "Fp56");
+    bench_field_ops::<MontgomeryField<72057594037927931>>(c, "Mont56");
     bench_field_ops::<BinaryExtField<8>>(c, "GF256");
     bench_field_ops::<BinaryExtField<16>>(c, "GF65536");
 }
@@ -561,6 +565,7 @@ fn batched_benchmarks(c: &mut Criterion) {
     // Matched 56-bit width vs smalljac's batched (ctx + ff_parallel_invert) path,
     // plus 16-bit for the field-width contrast.
     bench_not_char2_batched::<PrimeField<72057594037927931>>(c, "Fp56", 1024);
+    bench_not_char2_batched::<MontgomeryField<72057594037927931>>(c, "Mont56", 1024);
     bench_not_char2_batched::<PrimeField<65521>>(c, "F65521", 1024);
 }
 
