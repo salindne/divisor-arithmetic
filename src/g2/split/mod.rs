@@ -12,6 +12,7 @@
 //! `add_neg`/`double_neg` and `add_pos`/`double_pos`.
 
 pub mod not_char2;
+pub mod arbitrary;
 
 /// Record that a named formula branch (matching the Magma `DEBUG` labels, e.g.
 /// `"DBL03"`) was taken. Compiles to a no-op outside tests.
@@ -49,6 +50,8 @@ pub(crate) mod coverage {
 
 #[cfg(test)]
 mod test_support;
+#[cfg(test)]
+mod arb_tests;
 #[cfg(test)]
 mod wb_vectors;
 #[cfg(test)]

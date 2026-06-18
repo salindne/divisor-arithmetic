@@ -1,13 +1,19 @@
 //! Generic split model divisor arithmetic for arbitrary genus.
 //!
 //! Split curves have two points at infinity:
-//! - `y² = f(x)` where `deg(f) = 2g+2`
+//! - `y² + h(x)·y = f(x)` where `deg(f) = 2g+2`
 //!
 //! Divisors are represented as `(u, v, w, n)` where:
 //! - `u` is monic with `deg(u) ≤ g`
 //! - `v` has a specific form related to the Vpl polynomial
-//! - `w = (f - v²) / u`
+//! - `w = (f - v·(v + h)) / u`
 //! - `n` is the balancing weight
+//!
+//! These are faithful ports of `Add/Double/Adjust_SPLIT_{NEG,POS}` from
+//! `reduced_basis_arithmetic.mag` and serve as the reference oracle for the
+//! explicit g2 formulas. The basis polynomial passed in is `Vn = −Vpl − h` for
+//! the negative basis and `Vpl` for the positive basis (matching the Magma
+//! testers). `h` is threaded throughout, so these are correct for any `h`.
 //!
 //! Based on: Sebastian Lindner, 2019
 
@@ -42,15 +48,15 @@ impl<F: Field> Divisor<F> {
         Self { u, v, w, n }
     }
 
-    /// Create the neutral (identity) divisor
-    pub fn neutral(f: &Poly<F>, v_pl: &Poly<F>, g: usize) -> Self {
-        let v_sq = v_pl * v_pl;
-        let w = f - &v_sq;
+    /// Create the neutral (identity) divisor `<1, V, f − V·(V + h), ⌈g/2⌉>`.
+    pub fn neutral(f: &Poly<F>, v_basis: &Poly<F>, h: &Poly<F>, g: usize) -> Self {
+        let vh = v_basis + h;
+        let w = f - &(v_basis * &vh);
         Self {
             u: Poly::constant(F::one()),
-            v: v_pl.clone(),
+            v: v_basis.clone(),
             w,
-            n: g.div_ceil(2) as i32,
+            n: ((g + 1) / 2) as i32,
         }
     }
 
@@ -60,71 +66,160 @@ impl<F: Field> Divisor<F> {
     }
 }
 
-/// Compute the Vpl polynomial for a split curve.
-///
-/// Returns the unique polynomial V of degree g+1 such that deg(f - V²) ≤ g.
+/// Compute the Vpl polynomial for a split curve (negative basis caller should
+/// negate and subtract `h`). Correct for monic `f` over odd characteristic;
+/// for arbitrary/char-2 curves callers pass `Vpl` in from their own precompute.
 pub fn compute_vpl<F: Field>(f: &Poly<F>, g: usize) -> Poly<F> {
-    // Leading coefficient of f (degree 2g+2)
     let fl = f.coeff(2 * g + 2);
-
-    // Leading term of Vpl is solution of fl - x² = 0
-    // We need a square root of fl. For odd characteristic, use Tonelli-Shanks
-    // or just try fl^((p+1)/4) for p ≡ 3 (mod 4)
-    // For simplicity, we'll factor x² - fl and take the negative of the constant term
-    // This is a simplified approach - in practice you'd need proper square root
-
-    // For now, we compute iteratively as in the Magma code
-    // Vl := -Coeff(Factorization(fl - x^2)[2][1], 0)
-    // This requires factorization which is complex
-
-    // Simplified: assume fl = 1 (monic f), so Vl = 1 or -1
-    // For a proper implementation, we'd need square root in the field
-    let vl = if fl.is_one() {
-        F::one()
-    } else {
-        // Try to find square root by trying fl^((p-1)/2 + 1/2) = fl^((p+1)/4) for p ≡ 3 (mod 4)
-        // This is a simplification - proper implementation would use Tonelli-Shanks
-        fl // Placeholder - this won't be correct for non-trivial cases
-    };
-
+    // Leading term of Vpl solves fl − x² = 0. For monic f this is 1.
+    let vl = if fl.is_one() { F::one() } else { fl };
     let mut vpl = Poly::monomial(vl, g + 1);
-
-    // dinv := (2*Vl)^-1
     let two = F::one() + F::one();
     let dinv = (two * vl).inv();
-
-    // Work down one term at a time
     for i in (0..=g).rev() {
-        // Vpl += dinv * Coeff(f - Vpl², g+1+i) * x^i
         let vpl_sq = &vpl * &vpl;
         let diff = f - &vpl_sq;
         let coeff = diff.coeff(g + 1 + i);
-        let term = Poly::monomial(dinv * coeff, i);
-        vpl += term;
+        vpl = vpl + Poly::monomial(dinv * coeff, i);
     }
-
     vpl
 }
 
-/// Adjust a divisor to be in reduced form (negative reduced basis).
-///
-/// Implements `Adjust_SPLIT_NEG` from Magma.
-pub fn adjust_neg<F: Field>(
-    mut d: Divisor<F>,
-    _f: &Poly<F>,
-    v_neg: &Poly<F>, // -Vpl
-    g: usize,
-) -> Divisor<F> {
+// ---------------------------------------------------------------------------
+// Shared compose / finish helpers (identical between Add and Double except the
+// composition step, and between neg and pos except the reduce sign test).
+// ---------------------------------------------------------------------------
+
+/// Composition step for `Add` (semi-reduced `(u, v, w, n)`), per Magma.
+fn compose_add<F: Field>(d1: &Divisor<F>, d2: &Divisor<F>, h: &Poly<F>, g: usize) -> Divisor<F> {
+    let v1 = &d1.v;
+    let t1 = v1 + h; // v1 + h
+    let (s, a1, _b1) = d1.u.xgcd(&d2.u);
+    let mut k = (a1 * (&d2.v - v1)).rem(&d2.u);
+
+    let mut u1 = d1.u.clone();
+    let mut u2 = d2.u.clone();
+    let mut w1 = d1.w.clone();
+    let mut s_deg = s.deg();
+
+    if !s.is_one() {
+        let v2_plus_t1 = &d2.v + &t1; // v2 + v1 + h
+        let (s2, a2, b2) = s.xgcd(&v2_plus_t1);
+        if !s2.is_one() {
+            u1 = u1.exact_div(&s2);
+            u2 = u2.exact_div(&s2);
+            k = (a2 * k + b2 * w1.clone()).rem(&u2);
+            w1 = w1 * s2.clone();
+            s_deg = s2.deg();
+        } else {
+            k = (a2 * k + b2 * w1.clone()).rem(&u2);
+            s_deg = 0;
+        }
+    } else {
+        s_deg = 0;
+    }
+
+    let t = &u1 * &k;
+    let u = &u1 * &u2;
+    let v = v1 + &t;
+    let t1_plus_v = &t1 + &v; // (v1 + h) + v
+    let w = (w1 - k * t1_plus_v).exact_div(&u2);
+    let n = d1.n + d2.n + s_deg - ((g as i32 + 1) / 2);
+    Divisor::new(u, v, w, n)
+}
+
+/// Composition step for `Double`, per Magma.
+fn compose_double<F: Field>(d1: &Divisor<F>, h: &Poly<F>, g: usize) -> Divisor<F> {
+    let v1 = &d1.v;
+    let t1 = &(v1 + v1) + h; // 2·v1 + h
+    let (s, _a1, b1) = d1.u.xgcd(&t1);
+
+    let mut u1 = d1.u.clone();
+    let mut w1 = d1.w.clone();
+    let k;
+    let s_deg;
+    if !s.is_one() {
+        u1 = u1.exact_div(&s);
+        k = (b1 * w1.clone()).rem(&u1);
+        w1 = w1 * s.clone();
+        s_deg = s.deg();
+    } else {
+        k = (b1 * w1.clone()).rem(&u1);
+        s_deg = 0;
+    }
+
+    let t = &u1 * &k;
+    let u = &u1 * &u1;
+    let v = v1 + &t;
+    let t1_plus_t = &t1 + &t; // (2v1 + h) + T
+    let w = (w1 - k * t1_plus_t).exact_div(&u1);
+    let n = 2 * d1.n + s_deg - ((g as i32 + 1) / 2);
+    Divisor::new(u, v, w, n)
+}
+
+/// Normalize + reduce a semi-reduced divisor to `deg(u) ≤ g+1`, monic. `pos`
+/// selects the positive-basis reduce sign test. `vb` is the basis polynomial.
+fn finish<F: Field>(mut d: Divisor<F>, h: &Poly<F>, vb: &Poly<F>, g: usize, pos: bool) -> Divisor<F> {
+    let g1 = g as i32 + 1;
+    let lc_v = vb.leading_coeff(); // lc(V)
+    let lc_neg = (-(vb.clone()) - h.clone()).leading_coeff(); // lc(−V − h)
+
+    // Normalize
+    if d.v.deg() >= d.u.deg() {
+        let (q, r) = (vb - &d.v).div_rem(&d.u);
+        let tv = vb - &r;
+        let vh = &d.v + h;
+        let vht = &vh + &tv;
+        d.w = d.w - q * vht;
+        d.v = tv;
+    }
+
+    // Reduce
+    while d.u.deg() > g1 {
+        let vdeg = d.v.deg();
+        let lcv = d.v.leading_coeff();
+        // neg: first test lc(−V−h), second lc(V); pos: swapped.
+        let (first, second) = if pos { (lc_v, lc_neg) } else { (lc_neg, lc_v) };
+        if vdeg == g1 && lcv == first {
+            d.n += d.u.deg() - g1;
+        } else if vdeg == g1 && lcv == second {
+            d.n += g1 - d.w.deg();
+        } else {
+            d.n += (d.u.deg() - d.w.deg()) / 2;
+        }
+
+        let ou = d.u.clone();
+        d.u = d.w.clone();
+        let vv = vb + &d.v;
+        let vvh = &vv + h; // V + v + h
+        let (q, r) = vvh.div_rem(&d.u);
+        let tv = vb - &r;
+        d.w = ou - q * (&tv - &d.v);
+        d.v = tv;
+    }
+
+    let lc = d.u.leading_coeff();
+    d.w = d.w * lc;
+    d.u = d.u.make_monic();
+    d
+}
+
+// ---------------------------------------------------------------------------
+// Negative reduced basis
+// ---------------------------------------------------------------------------
+
+/// `Adjust_SPLIT_NEG`: reduce the balance weight into `0 ≤ n ≤ g − deg(u)`.
+pub fn adjust_neg<F: Field>(mut d: Divisor<F>, _f: &Poly<F>, h: &Poly<F>, v_neg: &Poly<F>, g: usize) -> Divisor<F> {
     let g_i32 = g as i32;
 
     if d.n < 0 {
-        // UP Adjust
+        // UP adjust
         while d.n < 0 {
             let ou = d.u.clone();
             d.u = d.w.clone();
-
-            let v_plus_v_neg = &d.v + v_neg;
-            let (q, r) = v_plus_v_neg.div_rem(&d.u);
+            let vv = v_neg + &d.v;
+            let vvh = &vv + h;
+            let (q, r) = vvh.div_rem(&d.u);
             let tv = v_neg - &r;
             d.w = ou - q * (&tv - &d.v);
             d.v = tv;
@@ -134,239 +229,77 @@ pub fn adjust_neg<F: Field>(
         d.w = d.w * lc;
         d.u = d.u.make_monic();
     } else if d.n > g_i32 - d.u.deg() {
-        // DWN Adjust
-        // Basis conversion
-        let v_pos = -v_neg.clone(); // Vpl
+        // DWN adjust: convert to positive basis Vp = −V − h, step, convert back.
+        let v_pos = -(v_neg.clone()) - h.clone();
         let t = &v_pos - v_neg;
         let (q, r) = t.div_rem(&d.u);
-        let tv = &d.v + &t - r;
-        d.w -= q * (&d.v + &tv);
+        let tv = &(&d.v + &t) - &r;
+        let vh = &d.v + h;
+        let vht = &vh + &tv;
+        d.w = d.w - q * vht;
         d.v = tv;
 
         while d.n > g_i32 - d.u.deg() + 1 {
             d.n = d.n + d.u.deg() - (g_i32 + 1);
             let ou = d.u.clone();
             d.u = d.w.clone();
-            let v_pos_plus_v = &v_pos + &d.v;
-            let (q, r) = v_pos_plus_v.div_rem(&d.u);
+            let vv = &v_pos + &d.v;
+            let vvh = &vv + h;
+            let (q, r) = vvh.div_rem(&d.u);
             let tv = &v_pos - &r;
             d.w = ou - q * (&tv - &d.v);
             d.v = tv;
         }
 
-        if d.n > g_i32 - d.u.deg() {
-            d.n = d.n + d.u.deg() - (g_i32 + 1);
-            let ou = d.u.clone();
-            d.u = d.w.clone();
-            let v_neg_plus_v = v_neg + &d.v;
-            let (q, r) = v_neg_plus_v.div_rem(&d.u);
-            let tv = v_neg - &r;
-            d.w = ou - q * (&tv - &d.v);
-            d.v = tv;
-        } else {
-            let t = v_neg - &v_pos;
-            let (q, r) = t.div_rem(&d.u);
-            let tv = &d.v + &t - r;
-            d.w -= q * (&d.v + &tv);
-            d.v = tv;
-        }
+        // Final step back into negative reduced.
+        d.n = d.n + d.u.deg() - (g_i32 + 1);
+        let ou = d.u.clone();
+        d.u = d.w.clone();
+        let vv = v_neg + &d.v;
+        let vvh = &vv + h;
+        let (q, r) = vvh.div_rem(&d.u);
+        let tv = v_neg - &r;
+        d.w = ou - q * (&tv - &d.v);
+        d.v = tv;
 
         let lc = d.u.leading_coeff();
         d.w = d.w * lc;
         d.u = d.u.make_monic();
     }
-
     d
 }
 
-/// Add two divisors on a split curve (negative reduced basis).
-///
-/// Implements `Add_SPLIT_NEG` from Magma.
-pub fn add_neg<F: Field>(
-    d1: &Divisor<F>,
-    d2: &Divisor<F>,
-    f: &Poly<F>,
-    v_neg: &Poly<F>,
-    g: usize,
-) -> Divisor<F> {
-    let u1 = &d1.u;
-    let v1 = &d1.v;
-    let w1 = &d1.w;
-    let n1 = d1.n;
-    let u2 = &d2.u;
-    let v2 = &d2.v;
-    let n2 = d2.n;
-
-    // Compose
-    let (s, a1, _b1) = u1.xgcd(u2);
-    let v_diff = v2 - v1;
-    let mut k = (a1 * v_diff).rem(u2);
-
-    let mut u1 = u1.clone();
-    let mut u2 = u2.clone();
-    let mut w1 = w1.clone();
-    let s_deg;
-
-    if !s.is_one() {
-        let v_sum = v2 + v1;
-        let (s2, a2, b2) = s.xgcd(&v_sum);
-
-        if !s2.is_one() {
-            u1 = u1.exact_div(&s2);
-            u2 = u2.exact_div(&s2);
-            k = (a2 * k + b2 * w1.clone()).rem(&u2);
-            w1 *= s2.clone();
-            s_deg = s2.deg();
-        } else {
-            k = (a2 * k + b2 * w1.clone()).rem(&u2);
-            s_deg = 0;
-        }
-    } else {
-        s_deg = 0;
-    }
-
-    let t = &u1 * &k;
-    let mut u = &u1 * &u2;
-    let mut v = v1 + &t;
-    let v1_plus_v = v1 + &v;
-    let mut w = (w1 - k * v1_plus_v).exact_div(&u2);
-    let g_i32 = g as i32;
-    let mut n = n1 + n2 + s_deg - ((g_i32 + 1) / 2);
-
-    // Normalize
-    if v.deg() >= u.deg() {
-        let v_neg_minus_v = v_neg - &v;
-        let (q, r) = v_neg_minus_v.div_rem(&u);
-        let tv = v_neg - &r;
-        w -= q * (&v + &tv);
-        v = tv;
-    }
-
-    // Reduce
-    while u.deg() > g_i32 + 1 {
-        let v_deg = v.deg();
-        let lc_v = v.leading_coeff();
-        let lc_v_neg = v_neg.leading_coeff();
-        let neg_lc_v_neg = -lc_v_neg;
-
-        if v_deg == g_i32 + 1 && lc_v == neg_lc_v_neg {
-            n = n + u.deg() - (g_i32 + 1);
-        } else if v_deg == g_i32 + 1 && lc_v == lc_v_neg {
-            n = n + g_i32 + 1 - w.deg();
-        } else {
-            n += (u.deg() - w.deg()) / 2;
-        }
-
-        let ou = u.clone();
-        u = w.clone();
-        let v_neg_plus_v = v_neg + &v;
-        let (q, r) = v_neg_plus_v.div_rem(&u);
-        let tv = v_neg - &r;
-        w = ou - q * (&tv - &v);
-        v = tv;
-    }
-
-    let lc = u.leading_coeff();
-    w = w * lc;
-    u = u.make_monic();
-
-    adjust_neg(Divisor::new(u, v, w, n), f, v_neg, g)
+/// `Add_SPLIT_NEG`.
+pub fn add_neg<F: Field>(d1: &Divisor<F>, d2: &Divisor<F>, f: &Poly<F>, h: &Poly<F>, v_neg: &Poly<F>, g: usize) -> Divisor<F> {
+    let d = compose_add(d1, d2, h, g);
+    let d = finish(d, h, v_neg, g, false);
+    adjust_neg(d, f, h, v_neg, g)
 }
 
-/// Double a divisor on a split curve (negative reduced basis).
-///
-/// Implements `Double_SPLIT_NEG` from Magma.
-pub fn double_neg<F: Field>(d1: &Divisor<F>, f: &Poly<F>, v_neg: &Poly<F>, g: usize) -> Divisor<F> {
-    let u1 = &d1.u;
-    let v1 = &d1.v;
-    let w1 = &d1.w;
-    let n1 = d1.n;
-
-    let t1 = v1 + v1;
-    let (s, _a1, b1) = u1.xgcd(&t1);
-
-    let mut u1 = u1.clone();
-    let mut w1 = w1.clone();
-    let k;
-    let s_deg;
-
-    if !s.is_one() {
-        u1 = u1.exact_div(&s);
-        k = (b1 * w1.clone()).rem(&u1);
-        w1 *= s.clone();
-        s_deg = s.deg();
-    } else {
-        k = (b1 * w1.clone()).rem(&u1);
-        s_deg = 0;
-    }
-
-    let t = &u1 * &k;
-    let mut u = &u1 * &u1;
-    let mut v = v1 + &t;
-    let t1_plus_t = &t1 + &t;
-    let mut w = (w1 - k * t1_plus_t).exact_div(&u1);
-    let g_i32 = g as i32;
-    let mut n = 2 * n1 + s_deg - ((g_i32 + 1) / 2);
-
-    // Normalize
-    if v.deg() >= u.deg() {
-        let v_neg_minus_v = v_neg - &v;
-        let (q, r) = v_neg_minus_v.div_rem(&u);
-        let tv = v_neg - &r;
-        w -= q * (&v + &tv);
-        v = tv;
-    }
-
-    // Reduce
-    while u.deg() > g_i32 + 1 {
-        let v_deg = v.deg();
-        let lc_v = v.leading_coeff();
-        let lc_v_neg = v_neg.leading_coeff();
-        let neg_lc_v_neg = -lc_v_neg;
-
-        if v_deg == g_i32 + 1 && lc_v == neg_lc_v_neg {
-            n = n + u.deg() - (g_i32 + 1);
-        } else if v_deg == g_i32 + 1 && lc_v == lc_v_neg {
-            n = n + g_i32 + 1 - w.deg();
-        } else {
-            n += (u.deg() - w.deg()) / 2;
-        }
-
-        let ou = u.clone();
-        u = w.clone();
-        let v_neg_plus_v = v_neg + &v;
-        let (q, r) = v_neg_plus_v.div_rem(&u);
-        let tv = v_neg - &r;
-        w = ou - q * (&tv - &v);
-        v = tv;
-    }
-
-    let lc = u.leading_coeff();
-    w = w * lc;
-    u = u.make_monic();
-
-    adjust_neg(Divisor::new(u, v, w, n), f, v_neg, g)
+/// `Double_SPLIT_NEG`.
+pub fn double_neg<F: Field>(d1: &Divisor<F>, f: &Poly<F>, h: &Poly<F>, v_neg: &Poly<F>, g: usize) -> Divisor<F> {
+    let d = compose_double(d1, h, g);
+    let d = finish(d, h, v_neg, g, false);
+    adjust_neg(d, f, h, v_neg, g)
 }
 
-/// Adjust a divisor to be in reduced form (positive reduced basis).
-///
-/// Implements `Adjust_SPLIT_POS` from Magma.
-pub fn adjust_pos<F: Field>(
-    mut d: Divisor<F>,
-    _f: &Poly<F>,
-    v_pos: &Poly<F>, // Vpl
-    g: usize,
-) -> Divisor<F> {
+// ---------------------------------------------------------------------------
+// Positive reduced basis
+// ---------------------------------------------------------------------------
+
+/// `Adjust_SPLIT_POS`: reduce the balance weight into `0 ≤ n ≤ g − deg(u)`.
+pub fn adjust_pos<F: Field>(mut d: Divisor<F>, _f: &Poly<F>, h: &Poly<F>, v_pos: &Poly<F>, g: usize) -> Divisor<F> {
     let g_i32 = g as i32;
 
     if d.n > g_i32 - d.u.deg() {
-        // DWN Adjust
+        // DWN adjust
         while d.n > g_i32 - d.u.deg() {
             d.n = d.n + d.u.deg() - (g_i32 + 1);
             let ou = d.u.clone();
             d.u = d.w.clone();
-            let v_pos_plus_v = v_pos + &d.v;
-            let (q, r) = v_pos_plus_v.div_rem(&d.u);
+            let vv = v_pos + &d.v;
+            let vvh = &vv + h;
+            let (q, r) = vvh.div_rem(&d.u);
             let tv = v_pos - &r;
             d.w = ou - q * (&tv - &d.v);
             d.v = tv;
@@ -375,217 +308,58 @@ pub fn adjust_pos<F: Field>(
         d.w = d.w * lc;
         d.u = d.u.make_monic();
     } else if d.n < 0 {
-        // UP Adjust via negative reduced
-        let v_neg = -v_pos.clone();
+        // Convert to negative basis Vp = −V − h, step, convert back up.
+        let v_neg = -(v_pos.clone()) - h.clone();
         let t = &v_neg - v_pos;
         let (q, r) = t.div_rem(&d.u);
-        let tv = &d.v + &t - r;
-        d.w -= q * (&d.v + &tv);
+        let tv = &(&d.v + &t) - &r;
+        let vh = &d.v + h;
+        let vht = &vh + &tv;
+        d.w = d.w - q * vht;
         d.v = tv;
 
         while d.n < -1 {
             let ou = d.u.clone();
             d.u = d.w.clone();
-            let v_neg_plus_v = &v_neg + &d.v;
-            let (q, r) = v_neg_plus_v.div_rem(&d.u);
+            let vv = &v_neg + &d.v;
+            let vvh = &vv + h;
+            let (q, r) = vvh.div_rem(&d.u);
             let tv = &v_neg - &r;
             d.w = ou - q * (&tv - &d.v);
             d.v = tv;
             d.n = d.n + g_i32 + 1 - d.u.deg();
         }
 
-        if d.n < 0 {
-            let ou = d.u.clone();
-            d.u = d.w.clone();
-            let v_pos_plus_v = v_pos + &d.v;
-            let (q, r) = v_pos_plus_v.div_rem(&d.u);
-            let tv = v_pos - &r;
-            d.w = ou - q * (&tv - &d.v);
-            d.v = tv;
-            d.n = d.n + g_i32 + 1 - d.u.deg();
-        } else {
-            let t = v_pos - &v_neg;
-            let (q, r) = t.div_rem(&d.u);
-            let tv = &d.v + &t - r;
-            d.w -= q * (&d.v + &tv);
-            d.v = tv;
-        }
+        // UP adjust back into positive reduced.
+        let ou = d.u.clone();
+        d.u = d.w.clone();
+        let vv = v_pos + &d.v;
+        let vvh = &vv + h;
+        let (q, r) = vvh.div_rem(&d.u);
+        let tv = v_pos - &r;
+        d.w = ou - q * (&tv - &d.v);
+        d.v = tv;
+        d.n = d.n + g_i32 + 1 - d.u.deg();
 
         let lc = d.u.leading_coeff();
         d.w = d.w * lc;
         d.u = d.u.make_monic();
     }
-
     d
 }
 
-/// Add two divisors on a split curve (positive reduced basis).
-///
-/// Implements `Add_SPLIT_POS` from Magma.
-pub fn add_pos<F: Field>(
-    d1: &Divisor<F>,
-    d2: &Divisor<F>,
-    f: &Poly<F>,
-    v_pos: &Poly<F>,
-    g: usize,
-) -> Divisor<F> {
-    let u1 = &d1.u;
-    let v1 = &d1.v;
-    let w1 = &d1.w;
-    let n1 = d1.n;
-    let u2 = &d2.u;
-    let v2 = &d2.v;
-    let n2 = d2.n;
-
-    // Compose
-    let (s, a1, _b1) = u1.xgcd(u2);
-    let v_diff = v2 - v1;
-    let mut k = (a1 * v_diff).rem(u2);
-
-    let mut u1 = u1.clone();
-    let mut u2 = u2.clone();
-    let mut w1 = w1.clone();
-    let s_deg;
-
-    if !s.is_one() {
-        let v_sum = v2 + v1;
-        let (s2, a2, b2) = s.xgcd(&v_sum);
-
-        if !s2.is_one() {
-            u1 = u1.exact_div(&s2);
-            u2 = u2.exact_div(&s2);
-            k = (a2 * k + b2 * w1.clone()).rem(&u2);
-            w1 *= s2.clone();
-            s_deg = s2.deg();
-        } else {
-            k = (a2 * k + b2 * w1.clone()).rem(&u2);
-            s_deg = 0;
-        }
-    } else {
-        s_deg = 0;
-    }
-
-    let t = &u1 * &k;
-    let mut u = &u1 * &u2;
-    let mut v = v1 + &t;
-    let v1_plus_v = v1 + &v;
-    let mut w = (w1 - k * v1_plus_v).exact_div(&u2);
-    let g_i32 = g as i32;
-    let mut n = n1 + n2 + s_deg - ((g_i32 + 1) / 2);
-
-    // Normalize
-    if v.deg() >= u.deg() {
-        let v_pos_minus_v = v_pos - &v;
-        let (q, r) = v_pos_minus_v.div_rem(&u);
-        let tv = v_pos - &r;
-        w -= q * (&v + &tv);
-        v = tv;
-    }
-
-    // Reduce
-    while u.deg() > g_i32 + 1 {
-        let v_deg = v.deg();
-        let lc_v = v.leading_coeff();
-        let lc_v_pos = v_pos.leading_coeff();
-        let neg_lc_v_pos = -lc_v_pos;
-
-        if v_deg == g_i32 + 1 && lc_v == lc_v_pos {
-            n = n + u.deg() - (g_i32 + 1);
-        } else if v_deg == g_i32 + 1 && lc_v == neg_lc_v_pos {
-            n = n + g_i32 + 1 - w.deg();
-        } else {
-            n += (u.deg() - w.deg()) / 2;
-        }
-
-        let ou = u.clone();
-        u = w.clone();
-        let v_pos_plus_v = v_pos + &v;
-        let (q, r) = v_pos_plus_v.div_rem(&u);
-        let tv = v_pos - &r;
-        w = ou - q * (&tv - &v);
-        v = tv;
-    }
-
-    let lc = u.leading_coeff();
-    w = w * lc;
-    u = u.make_monic();
-
-    adjust_pos(Divisor::new(u, v, w, n), f, v_pos, g)
+/// `Add_SPLIT_POS`.
+pub fn add_pos<F: Field>(d1: &Divisor<F>, d2: &Divisor<F>, f: &Poly<F>, h: &Poly<F>, v_pos: &Poly<F>, g: usize) -> Divisor<F> {
+    let d = compose_add(d1, d2, h, g);
+    let d = finish(d, h, v_pos, g, true);
+    adjust_pos(d, f, h, v_pos, g)
 }
 
-/// Double a divisor on a split curve (positive reduced basis).
-///
-/// Implements `Double_SPLIT_POS` from Magma.
-pub fn double_pos<F: Field>(d1: &Divisor<F>, f: &Poly<F>, v_pos: &Poly<F>, g: usize) -> Divisor<F> {
-    let u1 = &d1.u;
-    let v1 = &d1.v;
-    let w1 = &d1.w;
-    let n1 = d1.n;
-
-    let t1 = v1 + v1;
-    let (s, _a1, b1) = u1.xgcd(&t1);
-
-    let mut u1 = u1.clone();
-    let mut w1 = w1.clone();
-    let k;
-    let s_deg;
-
-    if !s.is_one() {
-        u1 = u1.exact_div(&s);
-        k = (b1 * w1.clone()).rem(&u1);
-        w1 *= s.clone();
-        s_deg = s.deg();
-    } else {
-        k = (b1 * w1.clone()).rem(&u1);
-        s_deg = 0;
-    }
-
-    let t = &u1 * &k;
-    let mut u = &u1 * &u1;
-    let mut v = v1 + &t;
-    let t1_plus_t = &t1 + &t;
-    let mut w = (w1 - k * t1_plus_t).exact_div(&u1);
-    let g_i32 = g as i32;
-    let mut n = 2 * n1 + s_deg - ((g_i32 + 1) / 2);
-
-    // Normalize
-    if v.deg() >= u.deg() {
-        let v_pos_minus_v = v_pos - &v;
-        let (q, r) = v_pos_minus_v.div_rem(&u);
-        let tv = v_pos - &r;
-        w -= q * (&v + &tv);
-        v = tv;
-    }
-
-    // Reduce
-    while u.deg() > g_i32 + 1 {
-        let v_deg = v.deg();
-        let lc_v = v.leading_coeff();
-        let lc_v_pos = v_pos.leading_coeff();
-        let neg_lc_v_pos = -lc_v_pos;
-
-        if v_deg == g_i32 + 1 && lc_v == lc_v_pos {
-            n = n + u.deg() - (g_i32 + 1);
-        } else if v_deg == g_i32 + 1 && lc_v == neg_lc_v_pos {
-            n = n + g_i32 + 1 - w.deg();
-        } else {
-            n += (u.deg() - w.deg()) / 2;
-        }
-
-        let ou = u.clone();
-        u = w.clone();
-        let v_pos_plus_v = v_pos + &v;
-        let (q, r) = v_pos_plus_v.div_rem(&u);
-        let tv = v_pos - &r;
-        w = ou - q * (&tv - &v);
-        v = tv;
-    }
-
-    let lc = u.leading_coeff();
-    w = w * lc;
-    u = u.make_monic();
-
-    adjust_pos(Divisor::new(u, v, w, n), f, v_pos, g)
+/// `Double_SPLIT_POS`.
+pub fn double_pos<F: Field>(d1: &Divisor<F>, f: &Poly<F>, h: &Poly<F>, v_pos: &Poly<F>, g: usize) -> Divisor<F> {
+    let d = compose_double(d1, h, g);
+    let d = finish(d, h, v_pos, g, true);
+    adjust_pos(d, f, h, v_pos, g)
 }
 
 #[cfg(test)]
@@ -599,42 +373,28 @@ mod tests {
         Poly::from_coeffs(coeffs.iter().map(|&c| F7::new(c)).collect())
     }
 
-    /// Create a genus 2 split curve over F7
-    /// f = x^6 + 2x^5 + 3x^4 + x^3 + 4x^2 + 2x + 1 (degree 6 = 2*2+2)
+    /// Create a genus 2 split curve over F7 (h = 0).
     fn test_curve_g2_split() -> Poly<F7> {
         poly(&[1, 2, 4, 1, 3, 2, 1])
     }
 
-    /// Find a valid divisor on a split curve
     fn find_valid_split_divisor(f: &Poly<F7>, vpl: &Poly<F7>, _g: usize) -> Option<Divisor<F7>> {
-        // Try to find x where f(x) is a quadratic residue
         for a_val in 0..7u64 {
             let a = F7::new(a_val);
             let fa = f.eval(a);
-
-            // Check if fa is a square in F7
             if fa.is_zero() || fa.pow(3).is_one() {
                 let b = if fa.is_zero() { F7::zero() } else { fa.pow(2) };
-
                 if b * b == fa {
-                    // u = x - a
-                    let u = poly(&[(7 - a_val) % 7, 1]); // x - a = x + (-a)
-
-                    // v should be in reduced basis form: vpl - (vpl - b) mod u
+                    let u = poly(&[(7 - a_val) % 7, 1]);
                     let b_poly = Poly::constant(b);
                     let vpl_minus_b = vpl - &b_poly;
                     let v = vpl - &vpl_minus_b.rem(&u);
-
                     let v_sq = &v * &v;
                     let diff = f - &v_sq;
-
-                    // Check divisibility
                     let (_, rem) = diff.div_rem(&u);
                     if rem.is_zero() {
                         let w = diff.exact_div(&u);
-                        // n should be in valid range [0, g - deg(u)]
-                        let n = 0;
-                        return Some(Divisor::new(u, v, w, n));
+                        return Some(Divisor::new(u, v, w, 0));
                     }
                 }
             }
@@ -647,11 +407,7 @@ mod tests {
         let f = test_curve_g2_split();
         let g = 2;
         let vpl = compute_vpl(&f, g);
-
-        // Vpl should have degree g+1 = 3
         assert_eq!(vpl.deg(), 3);
-
-        // f - Vpl² should have degree ≤ g = 2
         let vpl_sq = &vpl * &vpl;
         let diff = f - vpl_sq;
         assert!(diff.deg() <= g as i32);
@@ -661,9 +417,9 @@ mod tests {
     fn test_neutral_split() {
         let f = test_curve_g2_split();
         let g = 2;
+        let h = Poly::zero();
         let vpl = compute_vpl(&f, g);
-        let neutral = Divisor::neutral(&f, &vpl, g);
-
+        let neutral = Divisor::neutral(&f, &vpl, &h, g);
         assert!(neutral.u.is_one());
         assert_eq!(neutral.v, vpl);
     }
@@ -672,14 +428,11 @@ mod tests {
     fn test_double_pos_consistency() {
         let f = test_curve_g2_split();
         let g = 2;
+        let h = Poly::zero();
         let vpl = compute_vpl(&f, g);
-
         if let Some(d) = find_valid_split_divisor(&f, &vpl, g) {
-            // Double should produce a valid divisor
-            let doubled = double_pos(&d, &f, &vpl, g);
+            let doubled = double_pos(&d, &f, &h, &vpl, g);
             assert!(doubled.u.deg() <= g as i32);
-
-            // Verify w = (f - v²) / u
             let v_sq = &doubled.v * &doubled.v;
             let expected_w = (f - v_sq).exact_div(&doubled.u);
             assert_eq!(doubled.w, expected_w);
@@ -690,22 +443,17 @@ mod tests {
     fn test_double_neg_consistency() {
         let f = test_curve_g2_split();
         let g = 2;
+        let h = Poly::zero();
         let vpl = compute_vpl(&f, g);
         let v_neg = -vpl.clone();
-
         if let Some(mut d) = find_valid_split_divisor(&f, &vpl, g) {
-            // Convert to negative basis form
             let t = &v_neg - &vpl;
             let (q, r) = t.div_rem(&d.u);
             let tv = &d.v + &t - r;
-            d.w -= q * (&d.v + &tv);
+            d.w = d.w - q * (&d.v + &tv);
             d.v = tv;
-
-            // Double should produce a valid divisor
-            let doubled = double_neg(&d, &f, &v_neg, g);
+            let doubled = double_neg(&d, &f, &h, &v_neg, g);
             assert!(doubled.u.deg() <= g as i32);
-
-            // Verify w = (f - v²) / u
             let v_sq = &doubled.v * &doubled.v;
             let expected_w = (f - v_sq).exact_div(&doubled.u);
             assert_eq!(doubled.w, expected_w);
@@ -716,15 +464,12 @@ mod tests {
     fn test_add_pos_neutral() {
         let f = test_curve_g2_split();
         let g = 2;
+        let h = Poly::zero();
         let vpl = compute_vpl(&f, g);
-        let neutral = Divisor::neutral(&f, &vpl, g);
-
+        let neutral = Divisor::neutral(&f, &vpl, &h, g);
         if let Some(d) = find_valid_split_divisor(&f, &vpl, g) {
-            // D + 0 should give valid reduced divisor
-            let result = add_pos(&d, &neutral, &f, &vpl, g);
+            let result = add_pos(&d, &neutral, &f, &h, &vpl, g);
             assert!(result.u.deg() <= g as i32);
-
-            // Verify w = (f - v²) / u
             let v_sq = &result.v * &result.v;
             let expected_w = (f - v_sq).exact_div(&result.u);
             assert_eq!(result.w, expected_w);
@@ -735,13 +480,11 @@ mod tests {
     fn test_double_pos_vs_add_pos() {
         let f = test_curve_g2_split();
         let g = 2;
+        let h = Poly::zero();
         let vpl = compute_vpl(&f, g);
-
         if let Some(d) = find_valid_split_divisor(&f, &vpl, g) {
-            // 2D via double should give same u polynomial as D + D via add
-            let doubled = double_pos(&d, &f, &vpl, g);
-            let added = add_pos(&d, &d, &f, &vpl, g);
-
+            let doubled = double_pos(&d, &f, &h, &vpl, g);
+            let added = add_pos(&d, &d, &f, &h, &vpl, g);
             assert_eq!(doubled.u, added.u);
         }
     }

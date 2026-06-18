@@ -131,6 +131,7 @@ pub fn neutral_neg<F: Field>(cc: &CurveConstants<F>) -> Divisor<F> {
 pub fn random_valid_neg<F: Field, R: Rng>(cc: &CurveConstants<F>, rng: &mut R) -> Divisor<F> {
     let f = cc.f_poly();
     let vn = cc.vn();
+    let h = Poly::zero();
     let mut d = neutral_neg(cc);
 
     let mut produced = 0usize;
@@ -152,7 +153,7 @@ pub fn random_valid_neg<F: Field, R: Rng>(cc: &CurveConstants<F>, rng: &mut R) -
                 &f - &(&vn * &vn),
                 rng.gen_range(0..=G as i32),
             );
-            d = split::add_neg(&d, &base, &f, &vn, G);
+            d = split::add_neg(&d, &base, &f, &h, &vn, G);
             produced += 1;
         } else {
             // Monic u = x + u0 (root a = −u0); need a point (a, b): b² = f(a).
@@ -166,7 +167,7 @@ pub fn random_valid_neg<F: Field, R: Rng>(cc: &CurveConstants<F>, rng: &mut R) -
                 let vhat = &vn - &r;
                 let w = (&f - &(&vhat * &vhat)).exact_div(&u);
                 let base = Divisor::new(u, vhat, w, rng.gen_range(0..=(G as i32 - 1)));
-                d = split::add_neg(&d, &base, &f, &vn, G);
+                d = split::add_neg(&d, &base, &f, &h, &vn, G);
                 produced += 1;
             }
         }
@@ -239,6 +240,7 @@ pub fn deg1_pos<F: Field>(cc: &CurveConstants<F>, a: F, b: F, n: i32) -> Divisor
 pub fn random_valid_pos<F: Field, R: Rng>(cc: &CurveConstants<F>, rng: &mut R) -> Divisor<F> {
     let f = cc.f_poly();
     let vpl = cc.vpl();
+    let h = Poly::zero();
     let mut d = neutral_pos(cc);
 
     let mut produced = 0usize;
@@ -257,7 +259,7 @@ pub fn random_valid_pos<F: Field, R: Rng>(cc: &CurveConstants<F>, rng: &mut R) -
                 &f - &(&vpl * &vpl),
                 rng.gen_range(0..=G as i32),
             );
-            d = split::add_pos(&d, &base, &f, &vpl, G);
+            d = split::add_pos(&d, &base, &f, &h, &vpl, G);
             produced += 1;
         } else {
             let u0 = r0 * r1.inv();
@@ -268,7 +270,7 @@ pub fn random_valid_pos<F: Field, R: Rng>(cc: &CurveConstants<F>, rng: &mut R) -
                 let vhat = &vpl - &r;
                 let w = (&f - &(&vhat * &vhat)).exact_div(&u);
                 let base = Divisor::new(u, vhat, w, rng.gen_range(0..=(G as i32 - 1)));
-                d = split::add_pos(&d, &base, &f, &vpl, G);
+                d = split::add_pos(&d, &base, &f, &h, &vpl, G);
                 produced += 1;
             }
         }

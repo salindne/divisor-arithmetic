@@ -43,12 +43,12 @@ fn run_cases<const P: u64>(cases: &[Case]) {
 
         if c.op == b'D' {
             let got = double_neg(&from_generic(&d1), &cc);
-            let expected = from_generic(&split::double_neg(&d1, &f, &vn, G));
+            let expected = from_generic(&split::double_neg(&d1, &f, &crate::poly::Poly::zero(), &vn, G));
             assert_eq!(got, expected, "GF({P}) whitebox DBL case #{i}");
         } else {
             let d2 = build_divisor::<P>(&cc, c.u2, c.v2, c.n2);
             let got = add_neg(&from_generic(&d1), &from_generic(&d2), &cc);
-            let expected = from_generic(&split::add_neg(&d1, &d2, &f, &vn, G));
+            let expected = from_generic(&split::add_neg(&d1, &d2, &f, &crate::poly::Poly::zero(), &vn, G));
             assert_eq!(got, expected, "GF({P}) whitebox ADD case #{i}");
         }
     }
@@ -69,12 +69,12 @@ fn run_cases_pos<const P: u64>(cases: &[Case]) {
         let d1 = build_divisor::<P>(&cc, c.u1, c.v1, c.n1);
         if c.op == b'D' {
             let got = double_pos(&from_generic(&d1), &cc);
-            let expected = from_generic(&split::double_pos(&d1, &f, &vpl, G));
+            let expected = from_generic(&split::double_pos(&d1, &f, &crate::poly::Poly::zero(), &vpl, G));
             assert_eq!(got, expected, "GF({P}) pos whitebox DBL case #{i}");
         } else {
             let d2 = build_divisor::<P>(&cc, c.u2, c.v2, c.n2);
             let got = add_pos(&from_generic(&d1), &from_generic(&d2), &cc);
-            let expected = from_generic(&split::add_pos(&d1, &d2, &f, &vpl, G));
+            let expected = from_generic(&split::add_pos(&d1, &d2, &f, &crate::poly::Poly::zero(), &vpl, G));
             assert_eq!(got, expected, "GF({P}) pos whitebox ADD case #{i}");
         }
     }

@@ -57,21 +57,21 @@ fn harness_oracle_valid<const P: u64>(seed: u64, curves: usize, divisors: usize)
 
             // D + 0 = D and 0 + D = D.
             let neutral = neutral_neg(&cc);
-            let sum_id = split::add_neg(&d1, &neutral, &f, &vn, G);
+            let sum_id = split::add_neg(&d1, &neutral, &f, &crate::poly::Poly::zero(), &vn, G);
             assert_eq!(from_generic(&sum_id), from_generic(&d1), "D + 0 != D");
 
             // add and double produce well-formed reduced divisors.
-            let sum = split::add_neg(&d1, &d2, &f, &vn, G);
+            let sum = split::add_neg(&d1, &d2, &f, &crate::poly::Poly::zero(), &vn, G);
             assert_well_formed(&sum, &cc);
-            let dbl = split::double_neg(&d1, &f, &vn, G);
+            let dbl = split::double_neg(&d1, &f, &crate::poly::Poly::zero(), &vn, G);
             assert_well_formed(&dbl, &cc);
 
             // commutativity of the oracle (sanity).
-            let sum_rev = split::add_neg(&d2, &d1, &f, &vn, G);
+            let sum_rev = split::add_neg(&d2, &d1, &f, &crate::poly::Poly::zero(), &vn, G);
             assert_eq!(from_generic(&sum), from_generic(&sum_rev), "D1+D2 != D2+D1");
 
             // doubling equals adding to self.
-            let dd = split::add_neg(&d1, &d1, &f, &vn, G);
+            let dd = split::add_neg(&d1, &d1, &f, &crate::poly::Poly::zero(), &vn, G);
             assert_eq!(from_generic(&dbl), from_generic(&dd), "2D != D+D");
         }
     }
@@ -90,7 +90,7 @@ fn check_double_neg<F: Field + std::fmt::Display>(
     let vn = cc.vn();
     let coords = from_generic(d);
     let got = double_neg(&coords, cc);
-    let expected = from_generic(&split::double_neg(d, &f, &vn, G));
+    let expected = from_generic(&split::double_neg(d, &f, &crate::poly::Poly::zero(), &vn, G));
     assert_eq!(got, expected, "double_neg mismatch for input {:?}", coords);
 }
 
@@ -168,7 +168,7 @@ fn check_double_pos<F: Field + std::fmt::Display>(
     let f = cc.f_poly();
     let vpl = cc.vpl();
     let got = double_pos(&from_generic(d), cc);
-    let expected = from_generic(&split::double_pos(d, &f, &vpl, G));
+    let expected = from_generic(&split::double_pos(d, &f, &crate::poly::Poly::zero(), &vpl, G));
     assert_eq!(got, expected, "double_pos mismatch for {:?}", from_generic(d));
 }
 
@@ -219,7 +219,7 @@ fn check_add_pos<F: Field + std::fmt::Display>(
     let f = cc.f_poly();
     let vpl = cc.vpl();
     let got = add_pos(&from_generic(d1), &from_generic(d2), cc);
-    let expected = from_generic(&split::add_pos(d1, d2, &f, &vpl, G));
+    let expected = from_generic(&split::add_pos(d1, d2, &f, &crate::poly::Poly::zero(), &vpl, G));
     assert_eq!(got, expected, "add_pos mismatch:\n  d1={:?}\n  d2={:?}", from_generic(d1), from_generic(d2));
 }
 
@@ -267,7 +267,7 @@ fn check_add_neg<F: Field + std::fmt::Display>(
     let f = cc.f_poly();
     let vn = cc.vn();
     let got = add_neg(&from_generic(d1), &from_generic(d2), cc);
-    let expected = from_generic(&split::add_neg(d1, d2, &f, &vn, G));
+    let expected = from_generic(&split::add_neg(d1, d2, &f, &crate::poly::Poly::zero(), &vn, G));
     assert_eq!(
         got,
         expected,
