@@ -108,7 +108,8 @@ pub fn random_split_divisor_pos<F: Field, R: Rng>(
     g: usize,
     rng: &mut R,
 ) -> split::Divisor<F> {
-    let neutral = split::Divisor::neutral(f, vpl, g);
+    let h = Poly::zero();
+    let neutral = split::Divisor::neutral(f, vpl, &h, g);
 
     let mut result = neutral;
     let mut count = 0;
@@ -146,7 +147,7 @@ pub fn random_split_divisor_pos<F: Field, R: Rng>(
                 let w = diff.exact_div(&u);
                 let n = rng.gen_range(0..=(g as i32));
                 let d = split::Divisor::new(u, v, w, n);
-                result = split::add_pos(&result, &d, f, vpl, g);
+                result = split::add_pos(&result, &d, f, &h, vpl, g);
                 count += 1;
             }
         }
@@ -162,8 +163,9 @@ pub fn random_split_divisor_neg<F: Field, R: Rng>(
     g: usize,
     rng: &mut R,
 ) -> split::Divisor<F> {
+    let h = Poly::zero();
     let vpl = -v_neg.clone();
-    let neutral = split::Divisor::neutral(f, &vpl, g);
+    let neutral = split::Divisor::neutral(f, &vpl, &h, g);
 
     // Convert neutral to negative basis
     let t = v_neg - &vpl;
@@ -208,7 +210,7 @@ pub fn random_split_divisor_neg<F: Field, R: Rng>(
                 let w = diff.exact_div(&u);
                 let n = rng.gen_range(0..=(g as i32));
                 let d = split::Divisor::new(u, v, w, n);
-                result = split::add_neg(&result, &d, f, v_neg, g);
+                result = split::add_neg(&result, &d, f, &h, v_neg, g);
                 count += 1;
             }
         }
