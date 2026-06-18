@@ -21,7 +21,7 @@ This crate provides highly optimized implementations of divisor addition and dou
 - **Genus 2 Split Model**: Curves with two points at infinity
   - `y² + h(x)y = f(x)` where `deg(f) = 6`, `deg(h) ≤ 3`
   - Balanced divisors carry an integer balance weight, reduced with respect to a
-    positive (`Vpl`) or negative (`Vn = −Vpl − h`) basis — both bases provided
+    positive (`Vpl`) or negative (`Vn = −Vpl − h`) basis, with both bases provided
     (`add_neg`/`double_neg`, `add_pos`/`double_pos`)
   - Three variants: `not_char2`, `arbitrary` (any characteristic), `char2`
   - All formulas are cross-checked against a generic Cantor reference
@@ -29,13 +29,13 @@ This crate provides highly optimized implementations of divisor addition and dou
 
 - **Batched group law** (ramified `not_char2`): `add_batch` / `double_batch`
   amortize the single field inversion across a whole batch of independent
-  operations via Montgomery's trick (`field::batch_invert`) — the same strategy
+  operations via Montgomery's trick (`field::batch_invert`), the same strategy
   smalljac uses for generic-group order computations
 
 - **Field Implementations**:
   - `PrimeField<P>` - Prime fields F_p for small primes
   - `MontgomeryField<P>` - Prime fields F_p in Montgomery form (REDC multiply +
-    binary-GCD inverse, no division) for odd `P < 2^63` — ~4× faster group law
+    binary-GCD inverse, no division) for odd `P < 2^63`: ~4× faster group law
     than `PrimeField`, drop-in via the same `Field` trait
   - `BinaryExtField<K>` - Binary extension fields GF(2^k) for k ≤ 24
 
@@ -106,14 +106,14 @@ let doubled = double(&d1, &curve);
 ## Performance
 
 `g2::ramified::not_char2` compared to
-[smalljac](https://math.mit.edu/~drew/smalljac.html) (Sutherland) — a fast C
+[smalljac](https://math.mit.edu/~drew/smalljac.html) (Sutherland), a fast C
 library implementing the same genus-2 imaginary/ramified (degree-5) group law.
 Measured on the same machine (Apple Silicon, single core) at a 56-bit prime,
 using this crate's `MontgomeryField` backend.
 
 Both run the affine group law with one field inversion per operation. In
 **batched** mode a single inversion is amortized across `N = 1024` independent
-operations via Montgomery's trick — this crate's `add_batch` / `double_batch`
+operations via Montgomery's trick: this crate's `add_batch` / `double_batch`
 (built on `field::batch_invert`), and smalljac's `hecurve_ctx_t` state machine +
 `ff_parallel_invert`. ns per operation:
 
