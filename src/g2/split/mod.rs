@@ -64,6 +64,8 @@ mod blackbox_tests;
 #[cfg(test)]
 mod char2_tests;
 #[cfg(test)]
+mod op_counts;
+#[cfg(test)]
 mod test_support;
 #[cfg(test)]
 mod wb_vectors;
