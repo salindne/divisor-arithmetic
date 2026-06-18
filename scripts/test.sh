@@ -142,6 +142,20 @@ else
 fi
 
 # -----------------------------------------------------------------------------
+# Genus 2 Split Model Tests (not_char2 / arbitrary / char2, both bases)
+# -----------------------------------------------------------------------------
+print_section "Genus 2 Split Model Tests (nch2 + arb + char2, neg & pos bases)"
+OUTPUT=$(cargo test g2::split --release 2>&1) || true
+if echo "$OUTPUT" | grep -q "test result: ok"; then
+    SPLIT_COUNT=$(extract_count "$OUTPUT")
+    print_success "Split model tests passed (${SPLIT_COUNT:-?} tests)"
+    TOTAL_PASSED=$((TOTAL_PASSED + ${SPLIT_COUNT:-0}))
+else
+    print_fail "Split model tests failed"
+    TOTAL_FAILED=$((TOTAL_FAILED + 1))
+fi
+
+# -----------------------------------------------------------------------------
 # Summary
 # -----------------------------------------------------------------------------
 echo ""

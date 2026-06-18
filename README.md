@@ -18,6 +18,15 @@ This crate provides highly optimized implementations of divisor addition and dou
     - `not_char2` - Not characteristic 2 (simplified formulas when `h(x) = 0`)
     - `char2` - Characteristic 2 (XOR-based operations)
 
+- **Genus 2 Split Model**: Curves with two points at infinity
+  - `y² + h(x)y = f(x)` where `deg(f) = 6`, `deg(h) ≤ 3`
+  - Balanced divisors carry an integer balance weight, reduced with respect to a
+    positive (`Vpl`) or negative (`Vn = −Vpl − h`) basis — both bases provided
+    (`add_neg`/`double_neg`, `add_pos`/`double_pos`)
+  - Three variants: `not_char2`, `arbitrary` (any characteristic), `char2`
+  - All formulas are cross-checked against a generic Cantor reference
+    implementation (`generic::split`)
+
 - **Field Implementations**:
   - `PrimeField<P>` - Prime fields F_p for small primes
   - `BinaryExtField<K>` - Binary extension fields GF(2^k) for k ≤ 24
@@ -90,6 +99,8 @@ let doubled = double(&d1, &curve);
 
 Benchmark results on Apple M1 (single core):
 
+Ramified model:
+
 | Operation | Field | Time |
 |-----------|-------|------|
 | deg2 + deg2 (not_char2) | F_65521 | ~149 ns |
@@ -97,6 +108,17 @@ Benchmark results on Apple M1 (single core):
 | deg2 + deg2 (char2) | GF(2^8) | ~185 ns |
 | deg2 + deg2 (char2) | GF(2^16) | ~600 ns |
 | 2*deg2 (not_char2) | F_65521 | ~194 ns |
+
+Split model (degree-2 balanced divisors, negative basis):
+
+| Operation | Field | Time |
+|-----------|-------|------|
+| add (not_char2) | F_65521 | ~180 ns |
+| add (arbitrary) | F_65521 | ~190 ns |
+| add (char2) | GF(2^8) | ~200 ns |
+| add (char2) | GF(2^16) | ~625 ns |
+| double (not_char2) | F_8191 | ~155 ns |
+| double (char2) | GF(2^16) | ~680 ns |
 
 Run benchmarks with:
 ```bash

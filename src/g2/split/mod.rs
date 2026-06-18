@@ -6,10 +6,14 @@
 //! positive (`Vpl`) or negative (`Vn = −Vpl − h`) basis.
 //!
 //! Variants (matching the ramified module's layout, one per characteristic):
-//! - [`not_char2`] — fields of characteristic ≠ 2 (`h = 0`)
+//! - [`not_char2`] — fields of characteristic ≠ 2 (`h = 0`, `deg f = 6`)
+//! - [`arbitrary`] — any characteristic, general `h` (degree ≤ 3)
+//! - [`char2`] — characteristic 2 (`GF(2^k)`), `h = x³ + h1·x + h0`
 //!
 //! Each variant provides `precompute` (curve constants + reduced basis) plus
-//! `add_neg`/`double_neg` and `add_pos`/`double_pos`.
+//! `add_neg`/`double_neg` and `add_pos`/`double_pos`. Correctness is established
+//! by cross-checking against the generic Cantor reference in
+//! [`crate::generic::split`].
 
 pub mod not_char2;
 pub mod arbitrary;
